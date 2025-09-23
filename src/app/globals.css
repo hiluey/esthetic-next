@@ -1,26 +1,108 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  :root, :root[data-theme="default"] {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 340 82% 52%; /* Hot Pink */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 345 20% 95%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 345 50% 97%;
+    --accent-foreground: 340 82% 52%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 340 82% 52%;
+    --radius: 0.8rem;
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  :root[data-theme="blue"] {
+    --primary: 217 91% 60%; /* Serene Blue */
+    --accent: 217 50% 97%;
+    --accent-foreground: 217 91% 60%;
+    --secondary: 220 20% 95%;
+    --ring: 217 91% 60%;
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root[data-theme="green"] {
+    --primary: 142 76% 36%; /* Mint Green */
+    --accent: 142 50% 97%;
+    --accent-foreground: 142 76% 36%;
+    --secondary: 150 20% 95%;
+    --ring: 142 76% 36%;
+  }
+
+  :root[data-theme="orange"] {
+    --primary: 25 95% 53%; /* Vibrant Orange */
+    --accent: 25 50% 97%;
+    --accent-foreground: 25 95% 53%;
+    --secondary: 30 20% 95%;
+    --ring: 25 95% 53%;
+  }
+
+  .dark {
+    --background: 225 20% 10%;
+    --foreground: 210 40% 98%;
+    --card: 225 20% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 225 20% 10%;
+    --popover-foreground: 210 40% 98%;
+    --secondary: 225 20% 15%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 225 20% 15%;
+    --muted-foreground: 215 20% 65%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 225 20% 20%;
+    --input: 225 20% 20%;
+  }
+
+  .dark, .dark[data-theme="default"] {
+    --primary: 340 90% 65%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 340 20% 15%;
+    --accent-foreground: 340 90% 65%;
+    --ring: 340 90% 65%;
+  }
+  
+  .dark[data-theme="blue"] {
+    --primary: 217 91% 60%;
+    --accent: 217 20% 15%;
+    --accent-foreground: 217 91% 60%;
+    --ring: 217 91% 60%;
+  }
+
+  .dark[data-theme="green"] {
+    --primary: 142 71% 45%;
+    --accent: 142 20% 15%;
+    --accent-foreground: 142 71% 45%;
+    --ring: 142 71% 45%;
+  }
+
+  .dark[data-theme="orange"] {
+    --primary: 25 95% 58%;
+    --accent: 25 20% 15%;
+    --accent-foreground: 25 95% 58%;
+    --ring: 25 95% 58%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
 }
