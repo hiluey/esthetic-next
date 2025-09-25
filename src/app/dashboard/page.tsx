@@ -16,15 +16,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import {
-  ArrowUpRight,
-  Users,
   DollarSign,
   CalendarCheck,
+  Users,
   Award,
   Quote,
+  Clock,
+  Sparkles,
+  Scissors,
+  Droplet,
 } from "lucide-react";
 import {
   ChartContainer,
@@ -50,40 +51,38 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-const vipClients = [
+// Agenda do dia
+const dailyAgenda = [
   {
-    name: "Ana Clara",
-    avatar: "AC",
-    img: "1",
-    visits: 9,
-    totalSpent: 2150.75,
+    time: "09:00",
+    procedure: "Limpeza de Pele",
+    value: 180,
+    icon: <Sparkles className="w-4 h-4 text-blue-500" />,
   },
   {
-    name: "Mariana Costa",
-    avatar: "MC",
-    img: "2",
-    visits: 7,
-    totalSpent: 1890.5,
+    time: "11:00",
+    procedure: "Massagem Relaxante",
+    value: 250,
+    icon: <Clock className="w-4 h-4 text-green-500" />,
   },
   {
-    name: "Juliana Santos",
-    avatar: "JS",
-    img: "3",
-    visits: 6,
-    totalSpent: 1540.0,
+    time: "14:30",
+    procedure: "Tratamento Capilar",
+    value: 320,
+    icon: <Scissors className="w-4 h-4 text-purple-500" />,
   },
   {
-    name: "Beatriz Oliveira",
-    avatar: "BO",
-    img: "4",
-    visits: 5,
-    totalSpent: 1230.25,
+    time: "16:00",
+    procedure: "Preenchimento Facial",
+    value: 750,
+    icon: <Droplet className="w-4 h-4 text-pink-500" />,
   },
 ];
 
 export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6">
+      {/* Cards superiores */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -99,6 +98,7 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -113,6 +113,7 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
@@ -125,6 +126,7 @@ export default function Dashboard() {
             </p>
           </CardContent>
         </Card>
+
         <Card className="bg-gradient-to-tr from-primary to-purple-400 text-primary-foreground">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-primary-foreground/80">
@@ -142,6 +144,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Faturamento + Agenda */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -167,38 +170,34 @@ export default function Dashboard() {
             </ChartContainer>
           </CardContent>
         </Card>
+
+        {/* Agenda do Dia */}
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Clientes VIP</CardTitle>
+            <CardTitle>Agenda do Dia</CardTitle>
             <CardDescription>
-              Seus clientes mais recorrentes e que mais gastam.
+              Procedimentos agendados para hoje.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead className="text-right">Gasto Total</TableHead>
+                  <TableHead>Horário</TableHead>
+                  <TableHead>Procedimento</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vipClients.map((client) => (
-                  <TableRow key={client.name}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9">
-                          <AvatarImage
-                            src={`https://picsum.photos/seed/vip-${client.img}/40/40`}
-                            alt={client.name}
-                          />
-                          <AvatarFallback>{client.avatar}</AvatarFallback>
-                        </Avatar>
-                        <div className="font-medium">{client.name}</div>
-                      </div>
+                {dailyAgenda.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-mono">{item.time}</TableCell>
+                    <TableCell className="flex items-center gap-2">
+                      {item.icon}
+                      {item.procedure}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {client.totalSpent.toLocaleString("pt-BR", {
+                      {item.value.toLocaleString("pt-BR", {
                         style: "currency",
                         currency: "BRL",
                       })}
@@ -210,6 +209,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Painel Motivacional */}
       <Card className="bg-accent/50 border-accent">
         <CardHeader className="flex flex-row items-start gap-4">
           <Quote className="h-6 w-6 text-muted-foreground mt-1" />
@@ -218,7 +219,9 @@ export default function Dashboard() {
             <CardDescription className="text-lg italic text-foreground/80 mt-2">
               "O sucesso é a soma de pequenos esforços repetidos dia após dia."
             </CardDescription>
-            <p className="text-sm text-muted-foreground mt-2">- Robert Collier</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              - Robert Collier
+            </p>
           </div>
         </CardHeader>
       </Card>
