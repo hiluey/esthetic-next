@@ -1,3 +1,5 @@
+"use client";
+
 import { PlusCircle, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,68 +25,61 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const products = [
-  {
-    name: "Sérum Vitamina C",
-    category: "Skincare",
-    price: "R$ 129,90",
-    stock: 15,
-    status: "in-stock",
-  },
-  {
-    name: "Máscara de Argila Verde",
-    category: "Skincare",
-    price: "R$ 79,90",
-    stock: 3,
-    status: "low-stock",
-  },
-  {
-    name: "Óleo Essencial Lavanda",
-    category: "Aromaterapia",
-    price: "R$ 49,90",
-    stock: 25,
-    status: "in-stock",
-  },
-  {
-    name: "Creme Hidratante Facial",
-    category: "Skincare",
-    price: "R$ 89,90",
-    stock: 0,
-    status: "out-of-stock",
-  },
-  {
-    name: "Limpeza de Pele Profunda",
-    category: "Serviço",
-    price: "R$ 180,00",
-    stock: Infinity,
-    status: "service",
-  },
-  {
-    name: "Drenagem Linfática",
-    category: "Serviço",
-    price: "R$ 250,00",
-    stock: Infinity,
-    status: "service",
-  },
-];
+import { useEffect, useState } from "react";
 
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
     case "in-stock":
       return <Badge variant="secondary">Em Estoque</Badge>;
     case "low-stock":
-      return <Badge variant="outline" className="text-orange-500 border-orange-500">Estoque Baixo</Badge>;
+      return (
+        <Badge variant="outline" className="text-orange-500 border-orange-500">
+          Estoque Baixo
+        </Badge>
+      );
     case "out-of-stock":
       return <Badge variant="destructive">Sem Estoque</Badge>;
     case "service":
-        return <Badge className="bg-primary/20 text-primary hover:bg-primary/30">Serviço</Badge>;
+      return (
+        <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
+          Serviço
+        </Badge>
+      );
     default:
       return <Badge variant="outline">N/A</Badge>;
   }
 }
 
+type Produto = {
+  nome: string;
+  categoria: string;
+  preco: number;
+  estoque: number;
+  status: string;
+};
+
 export default function ProductsPage() {
+  const [products, setProducts] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/produtos");
+        const data = await res.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Erro ao buscar produtos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  if (loading) return <div>Carregando produtos...</div>;
+
   return (
     <Card>
       <CardHeader>
@@ -116,19 +111,26 @@ export default function ProductsPage() {
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.name}>
+              <TableRow key={product.nome}>
                 <TableCell className="font-medium">
                   <div className="flex flex-col">
-                    <span>{product.name}</span>
-                    <span className="text-xs text-muted-foreground">{product.category}</span>
+                    <span>{product.nome}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {product.categoria}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={product.status} />
                 </TableCell>
-                <TableCell>{product.price}</TableCell>
+                <TableCell>
+                  {product.preco.toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })}
+                </TableCell>
                 <TableCell className="text-center">
-                  {isFinite(product.stock) ? product.stock : "N/A"}
+                  {isFinite(product.estoque) ? product.estoque : "N/A"}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>

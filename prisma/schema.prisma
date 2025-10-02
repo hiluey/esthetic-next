@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model agendamentos {
+  id                                             Int                  @id @default(autoincrement())
+  usuario_id                                     Int?
+  cliente_id                                     Int?
+  servico_id                                     Int?
+  colaborador_id                                 Int?
+  data_hora                                      DateTime?            @db.DateTime(0)
+  status                                         agendamentos_status? @default(agendado)
+  pago                                           Boolean?             @default(false)
+  criado_em                                      DateTime?            @default(now()) @db.DateTime(0)
+  usuarios_agendamentos_usuario_idTousuarios     usuarios?            @relation("agendamentos_usuario_idTousuarios", fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_1")
+  clientes                                       clientes?            @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_2")
+  servicos                                       servicos?            @relation(fields: [servico_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_3")
+  usuarios_agendamentos_colaborador_idTousuarios usuarios?            @relation("agendamentos_colaborador_idTousuarios", fields: [colaborador_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_4")
+  pagamentos                                     pagamentos[]
+
+  @@index([cliente_id], map: "cliente_id")
+  @@index([colaborador_id], map: "colaborador_id")
+  @@index([servico_id], map: "servico_id")
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model clientes {
+  id              Int            @id @default(autoincrement())
+  usuario_id      Int?
+  nome            String?        @db.VarChar(100)
+  telefone        String?        @db.VarChar(20)
+  email           String?        @db.VarChar(100)
+  data_nascimento DateTime?      @db.Date
+  criado_em       DateTime?      @default(now()) @db.DateTime(0)
+  agendamentos    agendamentos[]
+  usuarios        usuarios?      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "clientes_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model mensagens_marketing {
+  id         Int                         @id @default(autoincrement())
+  usuario_id Int?
+  tipo       mensagens_marketing_tipo?
+  texto      String?                     @db.Text
+  data_envio DateTime?                   @db.DateTime(0)
+  status     mensagens_marketing_status? @default(pendente)
+  criado_em  DateTime?                   @default(now()) @db.DateTime(0)
+  usuarios   usuarios?                   @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mensagens_marketing_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model metas_financeiras {
+  id         Int                        @id @default(autoincrement())
+  usuario_id Int?
+  descricao  String?                    @db.VarChar(255)
+  valor_meta Decimal?                   @db.Decimal(10, 2)
+  periodo    metas_financeiras_periodo?
+  atingida   Boolean?                   @default(false)
+  criado_em  DateTime?                  @default(now()) @db.DateTime(0)
+  usuarios   usuarios?                  @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "metas_financeiras_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model pagamentos {
+  id               Int                          @id @default(autoincrement())
+  agendamento_id   Int?
+  valor            Decimal?                     @db.Decimal(10, 2)
+  metodo_pagamento pagamentos_metodo_pagamento?
+  data_pagamento   DateTime?                    @default(now()) @db.DateTime(0)
+  status           pagamentos_status?           @default(pendente)
+  agendamentos     agendamentos?                @relation(fields: [agendamento_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pagamentos_ibfk_1")
+
+  @@index([agendamento_id], map: "agendamento_id")
+}
+
+model produtos {
+  id          Int       @id @default(autoincrement())
+  usuario_id  Int?
+  nome        String?   @db.VarChar(100)
+  estoque     Int?
+  validade    DateTime? @db.Date
+  custo       Decimal?  @db.Decimal(10, 2)
+  preco_venda Decimal?  @db.Decimal(10, 2)
+  criado_em   DateTime? @default(now()) @db.DateTime(0)
+  usuarios    usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "produtos_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model relatorios {
+  id             Int       @id @default(autoincrement())
+  usuario_id     Int?
+  tipo_relatorio String?   @db.VarChar(100)
+  dados          Json?
+  criado_em      DateTime? @default(now()) @db.DateTime(0)
+  usuarios       usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "relatorios_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model servicos {
+  id              Int            @id @default(autoincrement())
+  usuario_id      Int?
+  nome            String?        @db.VarChar(100)
+  descricao       String?        @db.Text
+  preco           Decimal?       @db.Decimal(10, 2)
+  duracao_minutos Int?
+  criado_em       DateTime?      @default(now()) @db.DateTime(0)
+  agendamentos    agendamentos[]
+  usuarios        usuarios?      @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "servicos_ibfk_1")
+
+  @@index([usuario_id], map: "usuario_id")
+}
+
+model usuarios {
+  id                                                 Int                   @id @default(autoincrement())
+  nome                                               String?               @db.VarChar(100)
+  email                                              String?               @unique(map: "email") @db.VarChar(100)
+  senha_hash                                         String?               @db.VarChar(255)
+  tipo                                               usuarios_tipo?        @default(esteticista)
+  criado_em                                          DateTime?             @default(now()) @db.DateTime(0)
+  agendamentos_agendamentos_usuario_idTousuarios     agendamentos[]        @relation("agendamentos_usuario_idTousuarios")
+  agendamentos_agendamentos_colaborador_idTousuarios agendamentos[]        @relation("agendamentos_colaborador_idTousuarios")
+  clientes                                           clientes[]
+  mensagens_marketing                                mensagens_marketing[]
+  metas_financeiras                                  metas_financeiras[]
+  produtos                                           produtos[]
+  relatorios                                         relatorios[]
+  servicos                                           servicos[]
+}
+
+enum mensagens_marketing_tipo {
+  aniversario
+  followup
+  promocao
+  outro
+}
+
+enum pagamentos_metodo_pagamento {
+  pix
+  cartao
+  dinheiro
+  boleto
+  outro
+}
+
+enum metas_financeiras_periodo {
+  mensal
+  semanal
+  anual
+}
+
+enum usuarios_tipo {
+  esteticista
+  colaborador
+  admin
+}
+
+enum pagamentos_status {
+  pendente
+  confirmado
+  cancelado
+}
+
+enum mensagens_marketing_status {
+  pendente
+  enviado
+  falha
+}
+
+enum agendamentos_status {
+  agendado
+  realizado
+  cancelado
+}
