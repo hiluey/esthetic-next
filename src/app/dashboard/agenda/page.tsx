@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 import { Calendar, Loader2, Send, Sparkles, Bot } from "lucide-react";
@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -22,31 +21,119 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 type FormValues = {
-  command: string;
+  usuario_id: number;
+  cliente_id: number;
+  servico_id: number;
+  colaborador_id: number;
+  data_hora: string;
 };
 
 export default function AgendaPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [apiResult, setApiResult] = useState<string | null>(null);
+
+  const [clientes, setClientes] = useState<{ id: number; nome: string }[]>([]);
+  const [servicos, setServicos] = useState<{ id: number; nome: string }[]>([]);
+  const [colaboradores, setColaboradores] = useState<{ id: number; nome: string }[]>([]);
 
   const form = useForm<FormValues>({
-    defaultValues: { command: "" },
+    defaultValues: {
+      usuario_id: 1, // usuário logado (ajuste conforme autenticação)
+      cliente_id: 0,
+      servico_id: 0,
+      colaborador_id: 0,
+      data_hora: new Date().toISOString().slice(0, 16),
+    },
   });
+
+  // Busca os dados do banco
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const clientesRes = await fetch("/api/clientes");
+        const clientesData = await clientesRes.json();
+        setClientes(clientesData || []);
+
+        const servicosRes = await fetch("/api/servicos");
+        const servicosData = await servicosRes.json();
+        setServicos(servicosData || []);
+
+        const colabRes = await fetch("/api/usuarios");
+        const colabData = await colabRes.json();
+        setColaboradores(colabData || []);
+      } catch (err) {
+        console.error("Erro ao carregar dados:", err);
+      }
+    }
+    fetchData();
+  }, []);
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true);
-    setAiResult(null);
+    setApiResult(null);
 
-    // Simula processamento de "IA" com timeout
-    setTimeout(() => {
-      // Aqui você pode definir o resultado estático
-      const result = `✅ Comando recebido: "${values.command}". Agendamento confirmado para amanhã às 15h.`;
-      setAiResult(result);
+    try {
+      const response = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: Number(values.usuario_id),
+          cliente_id: Number(values.cliente_id),
+          servico_id: Number(values.servico_id),
+          colaborador_id: Number(values.colaborador_id),
+          data_hora: new Date(values.data_hora).toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Erro da API: ${errorText}`);
+      }
+
+      const resultData = await response.json();
+      setApiResult(`✅ Agendamento criado com ID ${resultData.id}.`);
       form.reset();
+    } catch (error: any) {
+      console.error("Erro ao agendar:", error);
+      setApiResult(`❌ Falha ao processar o agendamento: ${error.message}`);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   }
+
+  const renderSelect = (
+    field: any,
+    data: { id: number; nome: string }[],
+    placeholder: string
+  ) => (
+    <Select
+      onValueChange={(val) => field.onChange(Number(val))}
+      value={field.value ? field.value.toString() : ""}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      {data.length > 0 && (
+        <SelectContent>
+          {data.map((item) => (
+            <SelectItem key={item.id} value={item.id.toString()}>
+              {item.nome}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      )}
+    </Select>
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -57,33 +144,61 @@ export default function AgendaPage() {
               <Calendar className="h-6 w-6" />
               Agenda Inteligente
             </CardTitle>
-            <CardDescription>
-              Use comandos de texto para agendar, reagendar ou cancelar
-              horários. Tudo será processado de forma estática.
-            </CardDescription>
+            <CardDescription>Preencha os dados para agendar o serviço.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                {/* Cliente */}
                 <FormField
                   control={form.control}
-                  name="command"
+                  name="cliente_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>{renderSelect(field, clientes, "Selecione o cliente")}</FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Serviço */}
+                <FormField
+                  control={form.control}
+                  name="servico_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>{renderSelect(field, servicos, "Selecione o serviço")}</FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Colaborador */}
+                <FormField
+                  control={form.control}
+                  name="colaborador_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>{renderSelect(field, colaboradores, "Selecione o colaborador")}</FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Data e hora */}
+                <FormField
+                  control={form.control}
+                  name="data_hora"
                   render={({ field }) => (
                     <FormItem>
                       <FormControl>
-                        <Textarea
-                          placeholder="Ex: 'Agendar corte de cabelo para a Joana amanhã às 15h'."
-                          className="min-h-[100px]"
-                          {...field}
-                        />
+                        <Input type="datetime-local" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
                 <Button type="submit" disabled={isLoading} className="w-full">
                   {isLoading ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -98,6 +213,7 @@ export default function AgendaPage() {
         </Card>
       </div>
 
+      {/* Card de resultado */}
       <div className="lg:col-span-1">
         <Card className="sticky top-24">
           <CardHeader>
@@ -106,23 +222,21 @@ export default function AgendaPage() {
               Resultado
             </CardTitle>
             <CardDescription>
-              A confirmação do seu comando aparecerá aqui.
+              A confirmação do seu agendamento aparecerá aqui.
             </CardDescription>
           </CardHeader>
           <CardContent className="min-h-[240px] flex items-center justify-center">
             {isLoading && <Loader2 className="h-8 w-8 animate-spin text-primary" />}
-            {!isLoading && !aiResult && (
+            {!isLoading && !apiResult && (
               <div className="text-center text-muted-foreground">
                 <Bot className="h-10 w-10 mx-auto mb-2" />
-                <p>Aguardando seu comando...</p>
+                <p>Aguardando seu agendamento...</p>
               </div>
             )}
-            {aiResult && (
+            {apiResult && (
               <div className="space-y-4 text-sm">
                 <h3 className="font-semibold text-base">Agendamento Confirmado!</h3>
-                <p className="p-3 bg-accent/50 rounded-md border border-accent">
-                  {aiResult}
-                </p>
+                <p className="p-3 bg-accent/50 rounded-md border border-accent">{apiResult}</p>
               </div>
             )}
           </CardContent>

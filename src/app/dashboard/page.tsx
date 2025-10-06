@@ -27,14 +27,11 @@ import {
   Scissors,
   Droplet,
 } from "lucide-react";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartConfig,
-} from "@/components/ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
-import { useEffect, useState } from "react";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const chartData = [
   { month: "Jan", revenue: 1860 },
@@ -53,55 +50,16 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 type AgendaItem = {
-  time: string; // "09:00"
+  time: string;
   procedure: string;
   value: number;
   icon: "Sparkles" | "Clock" | "Scissors" | "Droplet";
 };
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({
-    faturamento: 0,
-    atendimentos: 0,
-    ticketMedio: 0,
-    metaMensal: 0,
-    progressoMeta: 0,
-  });
+  const { data: stats } = useSWR("/api/dashboard", fetcher, { refreshInterval: 10000 });
+  const { data: dailyAgenda } = useSWR<AgendaItem[]>("/api/agenda", fetcher, { refreshInterval: 10000 });
 
-  const [dailyAgenda, setDailyAgenda] = useState<AgendaItem[]>([]);
-
-  useEffect(() => {
-    async function fetchStats() {
-      try {
-        const res = await fetch("/api/dashboard");
-        if (!res.ok) {
-          throw new Error("Falha ao buscar dados do dashboard");
-        }
-        const data = await res.json();
-        setStats(data);
-      } catch (error) {
-        console.error("Erro ao buscar dados do dashboard:", error);
-      }
-    }
-
-    async function fetchAgenda() {
-      try {
-        const res = await fetch("/api/agenda");
-        if (!res.ok) {
-          throw new Error("Falha ao buscar agenda");
-        }
-        const data = await res.json();
-        setDailyAgenda(data);
-      } catch (error) {
-        console.error("Erro ao buscar agenda:", error);
-      }
-    }
-
-    fetchStats();
-    fetchAgenda();
-  }, []);
-
-  // Mapeia o nome do ícone para o componente lucide
   const iconMap = {
     Sparkles: <Sparkles className="w-4 h-4 text-blue-500" />,
     Clock: <Clock className="w-4 h-4 text-green-500" />,
@@ -109,9 +67,17 @@ export default function Dashboard() {
     Droplet: <Droplet className="w-4 h-4 text-pink-500" />,
   };
 
+  if (!stats || !dailyAgenda) {
+    return (
+      <div className="flex items-center justify-center h-screen text-muted-foreground">
+        Carregando dashboard...
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Cards superiores */}
+      {/* Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -120,10 +86,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.faturamento.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
+              {(stats?.faturamento ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <p className="text-xs text-muted-foreground">+20.1% em relação ao mês passado</p>
           </CardContent>
@@ -135,7 +98,7 @@ export default function Dashboard() {
             <CalendarCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.atendimentos}</div>
+            <div className="text-2xl font-bold">{stats?.atendimentos ?? 0}</div>
             <p className="text-xs text-muted-foreground">+18.1% em relação ao mês passado</p>
           </CardContent>
         </Card>
@@ -147,10 +110,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.ticketMedio.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
+              {(stats?.ticketMedio ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <p className="text-xs text-muted-foreground">+5.2% em relação ao mês passado</p>
           </CardContent>
@@ -158,30 +118,22 @@ export default function Dashboard() {
 
         <Card className="bg-gradient-to-tr from-primary to-purple-400 text-primary-foreground">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-primary-foreground/80">
-              Meta Mensal
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-primary-foreground/80">Meta Mensal</CardTitle>
             <Award className="h-4 w-4 text-primary-foreground/80" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats.metaMensal.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
+              {(stats?.metaMensal ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <Progress
-                value={Math.min(stats.progressoMeta, 100)}
-                className="h-2 bg-primary-foreground/20"
-              />
-              <span>{Math.round(stats.progressoMeta)}%</span>
+              <Progress value={Math.min(stats?.progressoMeta ?? 0, 100)} className="h-2 bg-primary-foreground/20" />
+              <span>{Math.round(stats?.progressoMeta ?? 0)}%</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Faturamento + Agenda */}
+      {/* Gráfico e agenda */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -191,13 +143,7 @@ export default function Dashboard() {
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
               <BarChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
+                <XAxis dataKey="month" tickLine={false} tickMargin={10} axisLine={false} tickFormatter={(v) => v.slice(0, 3)} />
                 <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                 <Bar dataKey="revenue" fill="var(--color-revenue)" radius={8} />
               </BarChart>
@@ -205,7 +151,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Agenda do Dia */}
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Agenda do Dia</CardTitle>
@@ -221,27 +166,19 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailyAgenda.length > 0 ? (
+                {dailyAgenda?.length > 0 ? (
                   dailyAgenda.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell className="font-mono">{item.time}</TableCell>
-                      <TableCell className="flex items-center gap-2">
-                        {iconMap[item.icon]}
-                        {item.procedure}
-                      </TableCell>
+                      <TableCell className="flex items-center gap-2">{iconMap[item.icon]} {item.procedure}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {item.value.toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
+                        {(item.value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center">
-                      Nenhum procedimento agendado para hoje.
-                    </TableCell>
+                    <TableCell colSpan={3} className="text-center">Nenhum procedimento agendado para hoje.</TableCell>
                   </TableRow>
                 )}
               </TableBody>
@@ -250,7 +187,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Painel Motivacional */}
+      {/* Painel motivacional */}
       <Card className="bg-accent/50 border-accent">
         <CardHeader className="flex flex-row items-start gap-4">
           <Quote className="h-6 w-6 text-muted-foreground mt-1" />
