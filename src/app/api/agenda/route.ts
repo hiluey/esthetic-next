@@ -1,33 +1,49 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import { prisma } from "@/lib/prisma"; // seu prisma client
+import { NextRequest, NextResponse } from "next/server";
+import { getPrisma } from "../../../lib/getPrisma";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export async function POST(req: NextRequest) {
   try {
-    const today = new Date();
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const prisma = await getPrisma();
+    const body = await req.json();
+    const { usuario_id, cliente_id, servico_id, colaborador_id, data_hora } = body;
 
-    const agenda = await prisma.appointment.findMany({
-      where: {
-        date: {
-          gte: startOfDay,
-          lte: endOfDay,
-        },
-      },
-      orderBy: {
-        date: "asc",
-      },
-      select: {
-        date: true,
-        procedure: true,
-        value: true,
-        icon: true, // se você armazenar isso no banco, ou use um map na frente
+    console.log("📩 Dados recebidos pela API:", body);
+
+    // converter IDs pra número, caso venham como string
+    const uid = Number(usuario_id);
+    const cid = Number(cliente_id);
+    const sid = Number(servico_id);
+    const colid = Number(colaborador_id);
+
+    // Validação
+    const usuario = await prisma.usuarios.findUnique({ where: { id: uid } });
+    if (!usuario) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 400 });
+
+    const cliente = await prisma.clientes.findUnique({ where: { id: cid } });
+    if (!cliente) return NextResponse.json({ error: "Cliente não encontrado" }, { status: 400 });
+
+    const servico = await prisma.servicos.findUnique({ where: { id: sid } });
+    if (!servico) return NextResponse.json({ error: "Serviço não encontrado" }, { status: 400 });
+
+    const colaborador = await prisma.usuarios.findUnique({ where: { id: colid } });
+    if (!colaborador) return NextResponse.json({ error: "Colaborador não encontrado" }, { status: 400 });
+
+    const agendamento = await prisma.agendamentos.create({
+      data: {
+        usuario_id: uid,
+        cliente_id: cid,
+        servico_id: sid,
+        colaborador_id: colid,
+        data_hora: new Date(data_hora),
       },
     });
 
-    res.status(200).json(agenda);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erro ao buscar agenda" });
+    return NextResponse.json(agendamento);
+  } catch (error: any) {
+    console.error("❌ Erro ao salvar agendamento:", error);
+    return NextResponse.json(
+      { error: "Erro ao salvar agendamento", detalhes: error.message },
+      { status: 500 }
+    );
   }
 }
