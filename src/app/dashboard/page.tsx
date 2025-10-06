@@ -22,10 +22,6 @@ import {
   Users,
   Award,
   Quote,
-  Clock,
-  Sparkles,
-  Scissors,
-  Droplet,
 } from "lucide-react";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from "@/components/ui/chart";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
@@ -50,22 +46,15 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 type AgendaItem = {
-  time: string;
-  procedure: string;
-  value: number;
-  icon: "Sparkles" | "Clock" | "Scissors" | "Droplet";
+  id: number;
+  procedimento: string | null;
+  valor: number | null;
+  data_hora: string; // YYYY-MM-DD HH:MM:SS
 };
 
 export default function Dashboard() {
   const { data: stats } = useSWR("/api/dashboard", fetcher, { refreshInterval: 10000 });
   const { data: dailyAgenda } = useSWR<AgendaItem[]>("/api/agenda", fetcher, { refreshInterval: 10000 });
-
-  const iconMap = {
-    Sparkles: <Sparkles className="w-4 h-4 text-blue-500" />,
-    Clock: <Clock className="w-4 h-4 text-green-500" />,
-    Scissors: <Scissors className="w-4 h-4 text-purple-500" />,
-    Droplet: <Droplet className="w-4 h-4 text-pink-500" />,
-  };
 
   if (!stats || !dailyAgenda) {
     return (
@@ -74,6 +63,14 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const today = new Date();
+  const todayString = today.toISOString().split("T")[0];
+
+  // Filtra apenas os agendamentos de hoje
+  const agendaHoje = dailyAgenda?.filter((item) =>
+    item.data_hora.startsWith(todayString)
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -166,13 +163,15 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {dailyAgenda?.length > 0 ? (
-                  dailyAgenda.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-mono">{item.time}</TableCell>
-                      <TableCell className="flex items-center gap-2">{iconMap[item.icon]} {item.procedure}</TableCell>
+                {agendaHoje?.length > 0 ? (
+                  agendaHoje.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono">
+                        {new Date(item.data_hora).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                      </TableCell>
+                      <TableCell>{item.procedimento ?? "-"}</TableCell>
                       <TableCell className="text-right font-mono">
-                        {(item.value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                        {(item.valor ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                       </TableCell>
                     </TableRow>
                   ))
