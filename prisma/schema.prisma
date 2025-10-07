@@ -130,10 +130,15 @@ model servicos {
 model usuarios {
   id                                                 Int                   @id @default(autoincrement())
   nome                                               String?               @db.VarChar(100)
+  nome_negocio                                       String?               @db.VarChar(100)
+  faturamento_mensal                                 Decimal?              @db.Decimal(10,2)
+  principais_metas                                   String?               @db.Text
+  cor_app                                            String?               @db.VarChar(50)
   email                                              String?               @unique(map: "email") @db.VarChar(100)
   senha_hash                                         String?               @db.VarChar(255)
   tipo                                               usuarios_tipo?        @default(esteticista)
   criado_em                                          DateTime?             @default(now()) @db.DateTime(0)
+
   agendamentos_agendamentos_usuario_idTousuarios     agendamentos[]        @relation("agendamentos_usuario_idTousuarios")
   agendamentos_agendamentos_colaborador_idTousuarios agendamentos[]        @relation("agendamentos_colaborador_idTousuarios")
   clientes                                           clientes[]
@@ -143,6 +148,7 @@ model usuarios {
   relatorios                                         relatorios[]
   servicos                                           servicos[]
 }
+
 
 enum mensagens_marketing_tipo {
   aniversario

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Calendar,
@@ -87,7 +87,10 @@ function UserNav() {
           <span>Configurações</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={async () => {
+          await fetch("/api/logout", { method: "POST" });
+          location.href = "/";
+        }}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sair</span>
         </DropdownMenuItem>
@@ -102,17 +105,22 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/logout", { method: "POST" });
+    router.push("/");
+  }
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2.5"
-          >
+          <Link href="/dashboard" className="flex items-center gap-2.5">
             <Icons.logo className="h-8 w-8 text-primary" />
-            <h1 className="text-xl font-bold font-headline text-foreground">EsteticaAI</h1>
+            <h1 className="text-xl font-bold font-headline text-foreground">
+              EsteticaAI
+            </h1>
           </Link>
         </SidebarHeader>
 
@@ -140,13 +148,20 @@ export default function DashboardLayout({
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
+        <header className="flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
           <SidebarTrigger className="md:hidden" />
-          <div className="w-full flex-1">
-            {/* Can add breadcrumbs or page title here */}
-          </div>
-          {/* Can add actions here */}
+          <div className="w-full flex-1">{/* page title ou breadcrumbs */}</div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </Button>
         </header>
+
         <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
