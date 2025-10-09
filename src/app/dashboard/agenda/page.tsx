@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 
 import { Calendar, Loader2, Send, Sparkles, Bot } from "lucide-react";
 
@@ -36,7 +36,11 @@ type FormValues = {
   servico_id: number;
   colaborador_id: number;
   data_hora: string;
+  procedimento: string;
+  valor: number;
+  hora_marcada: string;
 };
+
 
 export default function AgendaPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -48,15 +52,16 @@ export default function AgendaPage() {
 
   const form = useForm<FormValues>({
     defaultValues: {
-      usuario_id: 1, // usuário logado (ajuste conforme autenticação)
+      usuario_id: 1,
       cliente_id: 0,
       servico_id: 0,
       colaborador_id: 0,
       data_hora: new Date().toISOString().slice(0, 16),
+      procedimento: ""
     },
+
   });
 
-  // Busca os dados do banco
   useEffect(() => {
     async function fetchData() {
       try {
@@ -92,7 +97,13 @@ export default function AgendaPage() {
           servico_id: Number(values.servico_id),
           colaborador_id: Number(values.colaborador_id),
           data_hora: new Date(values.data_hora).toISOString(),
+          procedimento: values.procedimento || null, // string ou null
+          valor: Number(values.valor),
+          hora_marcada: values.hora_marcada,
         }),
+
+
+
       });
 
       if (!response.ok) {
@@ -185,6 +196,36 @@ export default function AgendaPage() {
                   )}
                 />
 
+                {/* Procedimento  */}
+
+                <FormField
+                  control={form.control}
+                  name="procedimento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="text" placeholder="Descreva o procedimento" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+
+                {/* Valor */}
+                <FormField
+                  control={form.control}
+                  name="valor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="Valor do procedimento" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 {/* Data e hora */}
                 <FormField
                   control={form.control}
@@ -199,12 +240,10 @@ export default function AgendaPage() {
                   )}
                 />
 
+
+
                 <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                   Agendar
                 </Button>
               </form>
@@ -221,9 +260,7 @@ export default function AgendaPage() {
               <Sparkles className="h-5 w-5 text-primary" />
               Resultado
             </CardTitle>
-            <CardDescription>
-              A confirmação do seu agendamento aparecerá aqui.
-            </CardDescription>
+            <CardDescription>A confirmação do seu agendamento aparecerá aqui.</CardDescription>
           </CardHeader>
           <CardContent className="min-h-[240px] flex items-center justify-center">
             {isLoading && <Loader2 className="h-8 w-8 animate-spin text-primary" />}

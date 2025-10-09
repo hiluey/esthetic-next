@@ -1,158 +1,324 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { Bot, DollarSign, Loader2, Send, Sparkles } from "lucide-react";
-
+import { useState, useMemo } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
+  CardContent,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type FormValues = {
-  financialData: string;
-  salonGoals: string;
+// Tipos
+type Meta = {
+  descricao: string;
+  valor_meta: number;
+  periodo: "mensal" | "semanal" | "anual";
+};
+
+type Pagamento = {
+  descricao: string;
+  valor: number;
+  metodo: "pix" | "cartao" | "dinheiro" | "boleto" | "outro";
+  data: string;
+  id?: number;
 };
 
 export default function FinanceiroPage() {
+  const usuarioId = 1; // Substituir depois pelo id do usuário logado
+
+  // Estados
+  const [meta, setMeta] = useState<Meta | null>(null);
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
+
+  // Inputs Meta
+  const [metaDescricao, setMetaDescricao] = useState("");
+  const [metaValor, setMetaValor] = useState<number | "">("");
+  const [metaPeriodo, setMetaPeriodo] = useState<Meta["periodo"]>("mensal");
+
+  // Inputs Pagamento
+  const [pagDescricao, setPagDescricao] = useState("");
+  const [pagValor, setPagValor] = useState<number | "">("");
+  const [pagMetodo, setPagMetodo] = useState<Pagamento["metodo"]>("pix");
+  const [pagData, setPagData] = useState("");
+
   const [isLoading, setIsLoading] = useState(false);
-  const [result, setResult] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
-    defaultValues: {
-      financialData: "",
-      salonGoals: "",
-    },
-  });
+  // Resumo financeiro
+  const totalPagamentos = useMemo(
+    () => pagamentos.reduce((sum, p) => sum + p.valor, 0),
+    [pagamentos]
+  );
 
-  async function onSubmit(values: FormValues) {
+  const lucroEstimado = useMemo(
+    () => (meta ? meta.valor_meta - totalPagamentos : 0),
+    [meta, totalPagamentos]
+  );
+
+  // =========================
+  // Salvar Meta no Banco
+  // =========================
+  const salvarMeta = async () => {
+    if (!metaDescricao || !metaValor) return;
+
     setIsLoading(true);
-    setResult(null);
+    try {
+      const res = await fetch("/api/financeiro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: usuarioId,
+          descricao: metaDescricao,
+          valor_meta: Number(metaValor),
+          periodo: metaPeriodo,
+        }),
+      });
 
-    // Simula processamento estático
-    setTimeout(() => {
-      const staticResult = `
-✅ Resumo da análise:
-- Receita atual: R$3000/mês
-- Custo fixo: R$1300/mês
-- Lucro líquido: R$1700/mês
-
-💡 Sugestões para aumentar faturamento:
-1. Fidelizar clientes oferecendo pacotes mensais.
-2. Aumentar ticket médio com serviços extras.
-3. Investir em marketing digital para atrair novos clientes.
-      `;
-      setResult(staticResult);
+      const data = await res.json();
+      if (res.ok) {
+        setMeta({
+          descricao: metaDescricao,
+          valor_meta: Number(metaValor),
+          periodo: metaPeriodo,
+        });
+        setMetaDescricao("");
+        setMetaValor("");
+      } else {
+        alert("Erro ao salvar meta: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar meta");
+    } finally {
       setIsLoading(false);
-      form.reset();
-    }, 1000);
-  }
+    }
+  };
+
+  // =========================
+  // Adicionar Pagamento
+  // =========================
+  const adicionarPagamento = async () => {
+    if (!pagDescricao || !pagValor || !pagData) return;
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/financeiro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          usuario_id: usuarioId,
+          descricao: pagDescricao,
+          valor: Number(pagValor),
+          metodo_pagamento: pagMetodo,
+          data_pagamento: pagData,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setPagamentos((prev) => [
+          ...prev,
+          { descricao: pagDescricao, valor: Number(pagValor), metodo: pagMetodo, data: pagData },
+        ]);
+        setPagDescricao("");
+        setPagValor("");
+        setPagData("");
+      } else {
+        alert("Erro ao salvar pagamento: " + data.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao salvar pagamento");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2">
+      {/* Lado esquerdo: Cadastro */}
+      <div className="lg:col-span-1 space-y-6">
+        {/* Meta */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-6 w-6" />
-              Consultora Financeira
-            </CardTitle>
+            <CardTitle>Definir Meta Financeira</CardTitle>
+            <CardDescription>Cadastre sua meta uma única vez.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {meta ? (
+              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                <p className="font-semibold">{meta.descricao}</p>
+                <p>Valor: R${meta.valor_meta.toFixed(2)}</p>
+                <p>Período: {meta.periodo}</p>
+              </div>
+            ) : (
+              <>
+                <Input
+                  placeholder="Descrição da meta"
+                  value={metaDescricao}
+                  onChange={(e) => setMetaDescricao(e.target.value)}
+                />
+                <Input
+                  type="number"
+                  placeholder="Valor da meta"
+                  value={metaValor}
+                  onChange={(e) =>
+                    setMetaValor(
+                      e.target.value === "" ? "" : Number(e.target.value)
+                    )
+                  }
+                />
+                <Select
+                  value={metaPeriodo}
+                  onValueChange={(v) => setMetaPeriodo(v as Meta["periodo"])}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="anual">Anual</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={salvarMeta}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  {isLoading ? "Salvando..." : "Salvar Meta"}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Pagamento */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Registrar Pagamento</CardTitle>
             <CardDescription>
-              Descreva sua situação financeira e seus objetivos. O resultado
-              será exibido de forma estática.
+              Adicione cada gasto ou pagamento realizado.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="financialData"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Dados Financeiros</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Ex: Faturamento mensal de R$3000, custo com produtos R$500, aluguel R$800..."
-                          className="min-h-[120px]"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="salonGoals"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Suas Metas</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Ex: Quero faturar R$5000/mês, comprar um novo equipamento..."
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="mr-2 h-4 w-4" />
-                  )}
-                  Analisar
-                </Button>
-              </form>
-            </Form>
+          <CardContent className="space-y-3">
+            <Input
+              placeholder="Descrição do pagamento"
+              value={pagDescricao}
+              onChange={(e) => setPagDescricao(e.target.value)}
+            />
+            <Input
+              type="number"
+              placeholder="Valor"
+              value={pagValor}
+              onChange={(e) =>
+                setPagValor(
+                  e.target.value === "" ? "" : Number(e.target.value)
+                )
+              }
+            />
+            <Select
+              value={pagMetodo}
+              onValueChange={(v) => setPagMetodo(v as Pagamento["metodo"])}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Método de pagamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pix">Pix</SelectItem>
+                <SelectItem value="cartao">Cartão</SelectItem>
+                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                <SelectItem value="boleto">Boleto</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              value={pagData}
+              onChange={(e) => setPagData(e.target.value)}
+            />
+            <Button
+              onClick={adicionarPagamento}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? "Salvando..." : "Adicionar Pagamento"}
+            </Button>
           </CardContent>
         </Card>
       </div>
 
-      <div className="lg:col-span-1">
+      {/* Resumo */}
+      <div className="lg:col-span-2 space-y-4">
         <Card className="sticky top-24">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Análise e Sugestões
-            </CardTitle>
-            <CardDescription>
-              O resultado da análise será exibido aqui.
-            </CardDescription>
+            <CardTitle>Resumo Financeiro</CardTitle>
+            <CardDescription>Atualizado em tempo real</CardDescription>
           </CardHeader>
-          <CardContent className="min-h-[360px] flex items-center justify-center">
-            {isLoading && (
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            )}
-            {!isLoading && !result && (
-              <div className="text-center text-muted-foreground">
-                <Bot className="h-10 w-10 mx-auto mb-2" />
-                <p>Aguardando seus dados...</p>
-              </div>
-            )}
-            {result && (
-              <pre className="text-sm whitespace-pre-wrap">{result}</pre>
-            )}
+          <CardContent className="grid grid-cols-3 gap-4 text-center">
+            <div className="p-4 bg-green-50 rounded-lg border">
+              <p className="text-sm text-gray-500">Meta</p>
+              <p className="text-xl font-bold text-green-700">
+                {meta ? `R$${meta.valor_meta.toFixed(2)}` : "R$0,00"}
+              </p>
+            </div>
+            <div className="p-4 bg-red-50 rounded-lg border">
+              <p className="text-sm text-gray-500">Total de Pagamentos</p>
+              <p className="text-xl font-bold text-red-700">
+                R${totalPagamentos.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg border">
+              <p className="text-sm text-gray-500">Lucro Estimado</p>
+              <p className="text-xl font-bold text-blue-700">
+                R${lucroEstimado.toFixed(2)}
+              </p>
+            </div>
+          </CardContent>
+
+          {/* Lista de Pagamentos */}
+          <CardContent className="mt-4 overflow-x-auto max-h-64">
+            <h3 className="font-semibold mb-2">Pagamentos / Gastos</h3>
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-2 px-3">Descrição</th>
+                  <th className="py-2 px-3">Valor</th>
+                  <th className="py-2 px-3">Método</th>
+                  <th className="py-2 px-3">Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagamentos.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="py-4 text-center text-gray-500 italic"
+                    >
+                      Nenhum pagamento registrado
+                    </td>
+                  </tr>
+                ) : (
+                  pagamentos.map((p, i) => (
+                    <tr key={i} className="border-b hover:bg-gray-50">
+                      <td className="py-2 px-3">{p.descricao}</td>
+                      <td className="py-2 px-3">R${p.valor.toFixed(2)}</td>
+                      <td className="py-2 px-3">{p.metodo}</td>
+                      <td className="py-2 px-3">{p.data}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </CardContent>
         </Card>
       </div>

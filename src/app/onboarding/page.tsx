@@ -25,7 +25,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup } from "@/components/ui/radio-group";
 import { Icons } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -63,14 +63,23 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { setTheme } = useTheme();
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<OnboardingFormValues>({
     resolver: zodResolver(onboardingSchema),
-    defaultValues: { fullName: "", email: "", password: "", businessName: "", monthlyGoal: 5000, businessGoals: "", appColor: "" },
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      businessName: "",
+      monthlyGoal: 5000,
+      businessGoals: "",
+      appColor: ""
+    },
     mode: "onChange",
   });
 
-  const { trigger, handleSubmit, watch, formState } = form;
+  const { trigger, handleSubmit, watch } = form;
   const selectedColor = watch("appColor");
 
   useEffect(() => {
@@ -81,17 +90,38 @@ export default function OnboardingPage() {
     const fields = steps[currentStep].fields as (keyof OnboardingFormValues)[];
     const isValid = await trigger(fields);
     if (isValid || fields.length === 0) {
-      if (currentStep < steps.length - 1) setCurrentStep((prev) => prev + 1);
+      if (currentStep < steps.length - 1) setCurrentStep(prev => prev + 1);
     }
   }
 
   function handleBack() {
-    if (currentStep > 0) setCurrentStep((prev) => prev - 1);
+    if (currentStep > 0) setCurrentStep(prev => prev - 1);
   }
 
-  function onSubmit(data: OnboardingFormValues) {
-    console.log(data);
-    router.push("/dashboard");
+  async function onSubmit(data: OnboardingFormValues) {
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result.error || "Erro ao criar usuário");
+        console.error(result.detalhes);
+        setIsSubmitting(false);
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      console.error(error);
+      alert("Erro de conexão com o servidor.");
+      setIsSubmitting(false);
+    }
   }
 
   const progress = (currentStep / (steps.length - 1)) * 100;
@@ -127,10 +157,8 @@ export default function OnboardingPage() {
                   </div>
 
                   <div className="min-h-[220px] flex flex-col items-center justify-center gap-4 w-full">
-                    {/* Welcome */}
+                    {/* Step fields */}
                     {currentStep === 0 && <p className="text-xl text-center">Seja bem-vinda! Clique em "Começar" para iniciar o onboarding.</p>}
-
-                    {/* Account */}
                     {currentStep === 1 && (
                       <div className="space-y-4 w-full">
                         <FormField control={form.control} name="fullName" render={({ field }) => (
@@ -144,8 +172,6 @@ export default function OnboardingPage() {
                         )} />
                       </div>
                     )}
-
-                    {/* Business Name */}
                     {currentStep === 2 && (
                       <FormField control={form.control} name="businessName" render={({ field }) => (
                         <FormItem className="w-full">
@@ -154,8 +180,6 @@ export default function OnboardingPage() {
                         </FormItem>
                       )} />
                     )}
-
-                    {/* Monthly Goal */}
                     {currentStep === 3 && (
                       <FormField control={form.control} name="monthlyGoal" render={({ field }) => (
                         <FormItem className="w-full">
@@ -164,8 +188,6 @@ export default function OnboardingPage() {
                         </FormItem>
                       )} />
                     )}
-
-                    {/* Business Goals */}
                     {currentStep === 4 && (
                       <FormField control={form.control} name="businessGoals" render={({ field }) => (
                         <FormItem className="w-full">
@@ -176,52 +198,29 @@ export default function OnboardingPage() {
                         </FormItem>
                       )} />
                     )}
-
-                    {/* App Color */}
                     {currentStep === 5 && (
-                      <FormField
-                        control={form.control}
-                        name="appColor"
-                        render={({ field }) => (
-                          <FormItem className="w-full">
-                            <RadioGroup
-                              value={field.value}
-                              onValueChange={(value) => field.onChange(value)}
-                              className="grid grid-cols-2 gap-4"
-                            >
-                              {appColors.map((color) => (
-                                <Label
-                                  key={color.id}
-                                  htmlFor={color.id}
-                                  className={cn(
-                                    "flex flex-col items-center justify-center rounded-xl border-2 p-5 cursor-pointer transition-all duration-300",
-                                    field.value === color.id
-                                      ? "border-primary scale-105 shadow-md"
-                                      : "border-muted bg-muted/20 hover:border-muted-foreground/60"
-                                  )}
-                                >
-                                  <input
-                                    type="radio"
-                                    id={color.id}
-                                    value={color.id}
-                                    checked={field.value === color.id}
-                                    onChange={(e) => field.onChange(e.target.value)}
-                                    className="hidden"
-                                  />
-                                  <div className="flex items-center gap-3 w-full justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <div className={cn("w-6 h-6 rounded-full", color.bg)} />
-                                      <span className="font-medium">{color.name}</span>
-                                    </div>
-                                    {field.value === color.id && <Check className="h-6 w-6 text-primary" />}
+                      <FormField control={form.control} name="appColor" render={({ field }) => (
+                        <FormItem className="w-full">
+                          <RadioGroup value={field.value} onValueChange={field.onChange} className="grid grid-cols-2 gap-4">
+                            {appColors.map(color => (
+                              <Label key={color.id} htmlFor={color.id} className={cn(
+                                "flex flex-col items-center justify-center rounded-xl border-2 p-5 cursor-pointer transition-all duration-300",
+                                field.value === color.id ? "border-primary scale-105 shadow-md" : "border-muted bg-muted/20 hover:border-muted-foreground/60"
+                              )}>
+                                <input type="radio" id={color.id} value={color.id} checked={field.value === color.id} onChange={e => field.onChange(e.target.value)} className="hidden" />
+                                <div className="flex items-center gap-3 w-full justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={cn("w-6 h-6 rounded-full", color.bg)} />
+                                    <span className="font-medium">{color.name}</span>
                                   </div>
-                                </Label>
-                              ))}
-                            </RadioGroup>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                                  {field.value === color.id && <Check className="h-6 w-6 text-primary" />}
+                                </div>
+                              </Label>
+                            ))}
+                          </RadioGroup>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
                     )}
                   </div>
                 </motion.div>
@@ -241,7 +240,9 @@ export default function OnboardingPage() {
                 {currentStep < steps.length - 1 ? (
                   <Button type="button" onClick={handleNext}>{currentStep === 0 ? "Começar" : "Próximo"}</Button>
                 ) : (
-                  <Button type="submit" size="lg" disabled={!canFinish}>Concluir e ir para o Painel</Button>
+                  <Button type="submit" size="lg" disabled={!canFinish || isSubmitting}>
+                    {isSubmitting ? "Salvando..." : "Concluir e ir para o Painel"}
+                  </Button>
                 )}
               </div>
             </CardFooter>

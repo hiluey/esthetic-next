@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Calendar,
@@ -38,6 +38,7 @@ import {
   SidebarMenuButton,
   SidebarFooter,
 } from "@/components/ui/sidebar";
+import { useUser } from "@/hooks/useUser";
 
 const navLinks = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -50,6 +51,11 @@ const navLinks = [
 ];
 
 function UserNav() {
+  const { user, loading } = useUser();
+
+  if (loading) return <div>Carregando...</div>;
+  if (!user) return <div>Não autenticado</div>;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -58,22 +64,25 @@ function UserNav() {
           className="relative h-10 w-full justify-start gap-2 px-2"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src="https://picsum.photos/seed/user-avatar/40/40" />
-            <AvatarFallback>SL</AvatarFallback>
+            <AvatarImage src={`https://picsum.photos/seed/${user.id}/40/40`} />
+            <AvatarFallback>{user.nome[0]}</AvatarFallback>
           </Avatar>
           <div className="text-left">
-            <p className="text-sm font-medium">Sofia Lima</p>
-            <p className="text-xs text-muted-foreground">Proprietária</p>
+            <p className="text-sm font-medium">{user.nome}</p>
+            <p className="text-xs text-muted-foreground">
+              {user.tipo === "esteticista" ? "Proprietário(a)" : user.tipo}
+            </p>
           </div>
           <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
+
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">Sofia Lima</p>
+            <p className="text-sm font-medium leading-none">{user.nome}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              sofia.lima@email.com
+              {user.email}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -87,7 +96,12 @@ function UserNav() {
           <span>Configurações</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={async () => {
+            await fetch("/api/logout", { method: "POST" });
+            location.href = "/";
+          }}
+        >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sair</span>
         </DropdownMenuItem>
@@ -102,17 +116,22 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/logout", { method: "POST" });
+    router.push("/");
+  }
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-2.5"
-          >
+          <Link href="/dashboard" className="flex items-center gap-2.5">
             <Icons.logo className="h-8 w-8 text-primary" />
-            <h1 className="text-xl font-bold font-headline text-foreground">EsteticaAI</h1>
+            <h1 className="text-xl font-bold font-headline text-foreground">
+              EsteticaAI
+            </h1>
           </Link>
         </SidebarHeader>
 
@@ -140,13 +159,20 @@ export default function DashboardLayout({
       </Sidebar>
 
       <SidebarInset>
-        <header className="flex h-14 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
+        <header className="flex h-14 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-6 sticky top-0 z-30">
           <SidebarTrigger className="md:hidden" />
-          <div className="w-full flex-1">
-            {/* Can add breadcrumbs or page title here */}
-          </div>
-          {/* Can add actions here */}
+          <div className="w-full flex-1">{/* page title ou breadcrumbs */}</div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </Button>
         </header>
+
         <main className="flex-1 p-4 md:p-6 lg:p-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>

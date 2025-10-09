@@ -9,26 +9,32 @@ datasource db {
 
 
 model agendamentos {
-  id                                             Int                  @id @default(autoincrement())
-  usuario_id                                     Int?
-  cliente_id                                     Int?
-  servico_id                                     Int?
-  colaborador_id                                 Int?
-  data_hora                                      DateTime?            @db.DateTime(0)
-  status                                         agendamentos_status? @default(agendado)
-  pago                                           Boolean?             @default(false)
-  criado_em                                      DateTime?            @default(now()) @db.DateTime(0)
-  usuarios_agendamentos_usuario_idTousuarios     usuarios?            @relation("agendamentos_usuario_idTousuarios", fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_1")
-  clientes                                       clientes?            @relation(fields: [cliente_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_2")
-  servicos                                       servicos?            @relation(fields: [servico_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_3")
-  usuarios_agendamentos_colaborador_idTousuarios usuarios?            @relation("agendamentos_colaborador_idTousuarios", fields: [colaborador_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "agendamentos_ibfk_4")
+  id              Int       @id @default(autoincrement())
+  usuario_id      Int?
+  cliente_id      Int?
+  servico_id      Int?
+  colaborador_id  Int?
+  procedimento    String?
+  valor           Decimal?  @db.Decimal(10, 2)
+  hora_marcada    String?
+  data_hora       DateTime? @db.DateTime(0)
+  status          agendamentos_status? @default(agendado)
+  pago            Boolean?  @default(false)
+  criado_em       DateTime? @default(now()) @db.DateTime(0)
+
+  usuarios_agendamentos_usuario_idTousuarios     usuarios? @relation("agendamentos_usuario_idTousuarios", fields: [usuario_id], references: [id])
+  clientes                                       clientes? @relation(fields: [cliente_id], references: [id])
+  servicos                                       servicos? @relation(fields: [servico_id], references: [id])
+  usuarios_agendamentos_colaborador_idTousuarios usuarios? @relation("agendamentos_colaborador_idTousuarios", fields: [colaborador_id], references: [id])
   pagamentos                                     pagamentos[]
 
-  @@index([cliente_id], map: "cliente_id")
-  @@index([colaborador_id], map: "colaborador_id")
-  @@index([servico_id], map: "servico_id")
-  @@index([usuario_id], map: "usuario_id")
+  @@index([cliente_id])
+  @@index([colaborador_id])
+  @@index([servico_id])
+  @@index([usuario_id])
 }
+
+
 
 model clientes {
   id              Int            @id @default(autoincrement())
@@ -124,10 +130,15 @@ model servicos {
 model usuarios {
   id                                                 Int                   @id @default(autoincrement())
   nome                                               String?               @db.VarChar(100)
+  nome_negocio                                       String?               @db.VarChar(100)
+  faturamento_mensal                                 Decimal?              @db.Decimal(10,2)
+  principais_metas                                   String?               @db.Text
+  cor_app                                            String?               @db.VarChar(50)
   email                                              String?               @unique(map: "email") @db.VarChar(100)
   senha_hash                                         String?               @db.VarChar(255)
   tipo                                               usuarios_tipo?        @default(esteticista)
   criado_em                                          DateTime?             @default(now()) @db.DateTime(0)
+
   agendamentos_agendamentos_usuario_idTousuarios     agendamentos[]        @relation("agendamentos_usuario_idTousuarios")
   agendamentos_agendamentos_colaborador_idTousuarios agendamentos[]        @relation("agendamentos_colaborador_idTousuarios")
   clientes                                           clientes[]
@@ -137,6 +148,7 @@ model usuarios {
   relatorios                                         relatorios[]
   servicos                                           servicos[]
 }
+
 
 enum mensagens_marketing_tipo {
   aniversario
