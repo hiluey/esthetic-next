@@ -1,59 +1,68 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; 
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const { usuarioId, meta, pagamentos } = await req.json();
+    const body = await req.json();
 
-    if (!usuarioId) {
-      return NextResponse.json({ error: "Usuário não informado" }, { status: 400 });
-    }
+    const { usuario_id, descricao, valor_meta, periodo, valor, metodo_pagamento, data_pagamento } = body;
 
-    if (meta) {
-      const metaExistente = await prisma.metas_financeiras.findFirst({
-        where: { usuario_id: usuarioId },
-      });
-
-      if (metaExistente) {
-        await prisma.metas_financeiras.update({
-          where: { id: metaExistente.id },
-          data: {
-            descricao: meta.descricao,
-            valor_meta: meta.valor,
-            periodo: meta.periodo,
-            atingida: false,
-          },
-        });
-      } else {
-        await prisma.metas_financeiras.create({
-          data: {
-            usuario_id: usuarioId,
-            descricao: meta.descricao,
-            valor_meta: meta.valor,
-            periodo: meta.periodo,
-          },
-        });
+    // =========================
+    // Salvar Meta Financeira
+    // =========================
+    if (descricao && valor_meta && periodo) {
+      if (!usuario_id) {
+        return NextResponse.json({ error: "Campo usuario_id é obrigatório para meta" }, { status: 400 });
       }
-    }
 
-
-    if (pagamentos && pagamentos.length > 0) {
-      const pagamentosData = pagamentos.map((p: any) => ({
-        valor: p.valor,
-        metodo_pagamento: p.metodo,
-        data_pagamento: p.data,
-        status: "pendente", 
-        agendamento_id: null, 
-      }));
-
-      await prisma.pagamentos.createMany({
-        data: pagamentosData,
+      const meta = await prisma.metas_financeiras.create({
+        data: {
+          usuario_id: Number(usuario_id),
+          descricao,
+          valor_meta: Number(valor_meta),
+          periodo,
+        },
       });
+
+      return NextResponse.json({ success: true, meta });
     }
 
-    return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.error(err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    // =========================
+    // Salvar Pagamento
+    // =========================
+    if (descricao && valor && metodo_pagamento && data_pagamento) {
+      if (!usuario_id) {
+        return NextResponse.json({ error: "Campo usuario_id é obrigatório para pagamento" }, { status: 400 });
+      }
+
+      const pagamento = await prisma.pagamentos.create({
+        data: {
+          valor: Number(valor),
+          metodo_pagamento,
+          data_pagamento: new Date(data_pagamento),
+          // Se você quiser associar a um agendamento, pode adicionar agendamento_id aqui
+        },
+      });
+
+      return NextResponse.json({ success: true, pagamento });
+    }
+
+    return NextResponse.json({ error: "Campos obrigatórios não preenchidos" }, { status: 400 });
+  } catch (error: any) {
+    console.error(error);
+    return NextResponse.json({ error: "Erro ao salvar dados", detalhes: error.message }, { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    // Buscar todas as metas e pagamentos do usuário (opcional: filtrar por usuario_id)
+    const metas = await prisma.metas_financeiras.findMany();
+    const pagamentos = await prisma.pagamentos.findMany();
+
+    return NextResponse.json({ metas, pagamentos });
+  } catch (error: any) {
+    console.error(error);
+    return NextResponse.json({ error: "Erro ao buscar dados", detalhes: error.message }, { status: 500 });
   }
 }

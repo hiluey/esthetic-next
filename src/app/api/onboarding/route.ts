@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
       appColor,
     } = body;
 
-    // Validações básicas
     if (!fullName || !email || !password) {
       return NextResponse.json(
         { error: "Nome, e-mail e senha são obrigatórios" },
@@ -28,7 +27,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Checar se já existe usuário com o mesmo email
     const existingUser = await prisma.usuarios.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(
@@ -37,10 +35,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Gerar hash da senha
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Criar usuário no banco
     const usuario = await prisma.usuarios.create({
       data: {
         nome: fullName,
@@ -54,7 +50,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ usuario }, { status: 201 });
+    // ✅ Setando o cookie para o novo usuário
+    const res = NextResponse.json({ usuario }, { status: 201 });
+    res.cookies.set("userId", String(usuario.id), {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return res;
   } catch (error: any) {
     return NextResponse.json(
       { error: "Erro ao criar usuário", detalhes: error.message },

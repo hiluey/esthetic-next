@@ -1,10 +1,12 @@
-import { cookies } from "next/headers";
+// app/api/me/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
-  const cookieStore = await cookies(); // <-- CORREÇÃO: await aqui
-  const userId = cookieStore.get("userId")?.value;
+export async function GET(req: Request) {
+  // Pega os cookies do header manualmente
+  const cookieHeader = req.headers.get("cookie") || "";
+  const match = cookieHeader.match(/userId=(\d+)/);
+  const userId = match ? match[1] : null;
 
   if (!userId) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });

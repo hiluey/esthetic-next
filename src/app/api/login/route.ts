@@ -12,12 +12,13 @@ export async function POST(req: Request) {
   if (!isPasswordValid) return NextResponse.json({ error: "Senha incorreta" }, { status: 400 });
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set("token", "meu_token_seguro", {
+  response.cookies.set("userId", String(user.id), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     maxAge: 60 * 60 * 24,
     path: "/",
   });
+
 
   return response;
 }
