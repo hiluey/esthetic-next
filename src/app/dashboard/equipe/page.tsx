@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { PlusCircle, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,47 +27,80 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
-const teamMembers = [
-  {
-    name: "Sofia Lima",
-    email: "sofia.lima@example.com",
-    role: "Proprietária",
-    avatar: "SL",
-    img: "user-avatar",
-    status: "active",
-    lastActivity: "2 min atrás",
-  },
-  {
-    name: "Ana Clara",
-    email: "ana.clara@example.com",
-    role: "Esteticista",
-    avatar: "AC",
-    img: "1",
-    status: "active",
-    lastActivity: "30 min atrás",
-  },
-  {
-    name: "Joana Martins",
-    email: "joana.martins@example.com",
-    role: "Esteticista",
-    avatar: "JM",
-    img: "2",
-    status: "active",
-    lastActivity: "2 horas atrás",
-  },
-  {
-    name: "Beatriz Oliveira",
-    email: "beatriz.oliveira@example.com",
-    role: "Recepcionista",
-    avatar: "BO",
-    img: "3",
-    status: "inactive",
-    lastActivity: "3 dias atrás",
-  },
-];
+type Membro = {
+  id: number;
+  nome: string;
+  email: string;
+  funcao: string;
+  status: string;
+  ultima_atividade: string;
+};
 
 export default function TeamPage() {
+  const [equipe, setEquipe] = useState<Membro[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    nome: "",
+    email: "",
+    funcao: "Esteticista",
+  });
+
+  useEffect(() => {
+    const fetchEquipe = async () => {
+      try {
+        const res = await fetch("/api/equipe");
+        const data = await res.json();
+        setEquipe(data);
+      } catch (error) {
+        console.error("Erro ao buscar equipe:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEquipe();
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!form.nome || !form.email) {
+      toast.error("Preencha nome e e-mail!");
+      return;
+    }
+
+    const res = await fetch("/api/equipe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+
+    if (res.ok) {
+      toast.success("Membro adicionado com sucesso!");
+      const novo = await res.json();
+      setEquipe((prev) => [novo, ...prev]);
+      setOpen(false);
+      setForm({ nome: "", email: "", funcao: "Esteticista" });
+    } else {
+      const erro = await res.json();
+      toast.error(erro.error || "Erro ao adicionar membro.");
+    }
+  };
+
+  if (loading) return <div>Carregando equipe...</div>;
+
   return (
     <Card>
       <CardHeader>
@@ -75,12 +111,74 @@ export default function TeamPage() {
               Gerencie sua equipe e veja as permissões de cada um.
             </CardDescription>
           </div>
-          <Button size="sm" className="gap-1">
-            <PlusCircle className="h-4 w-4" />
-            Convidar Membro
-          </Button>
+
+          {/* Botão + Modal */}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1">
+                <PlusCircle className="h-4 w-4" />
+                Convidar Membro
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Convidar Novo Membro</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados abaixo para adicionar alguém à equipe.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="nome" className="text-right">
+                    Nome
+                  </Label>
+                  <Input
+                    id="nome"
+                    className="col-span-3"
+                    value={form.nome}
+                    onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="email" className="text-right">
+                    E-mail
+                  </Label>
+                  <Input
+                    id="email"
+                    className="col-span-3"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="funcao" className="text-right">
+                    Função
+                  </Label>
+                  <Select
+                    value={form.funcao}
+                    onValueChange={(value) => setForm({ ...form, funcao: value })}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Proprietária">Proprietária</SelectItem>
+                      <SelectItem value="Esteticista">Esteticista</SelectItem>
+                      <SelectItem value="Recepcionista">Recepcionista</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button onClick={handleSubmit}>Salvar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
+
       <CardContent>
         <Table>
           <TableHeader>
@@ -95,39 +193,52 @@ export default function TeamPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teamMembers.map((member) => (
-              <TableRow key={member.email}>
-                <TableCell className="font-medium">
+            {equipe.map((membro) => (
+              <TableRow key={membro.id}>
+                <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarImage
-                        src={`https://picsum.photos/seed/${member.img}/40/40`}
-                        alt={member.name}
+                        src={`https://picsum.photos/seed/${membro.id}/40/40`}
+                        alt={membro.nome}
                       />
-                      <AvatarFallback>{member.avatar}</AvatarFallback>
+                      <AvatarFallback>
+                        {membro.nome.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p>{member.name}</p>
-                      <p className="text-xs text-muted-foreground">{member.email}</p>
+                      <p>{membro.nome}</p>
+                      <p className="text-xs text-muted-foreground">{membro.email}</p>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={member.role === 'Proprietária' ? 'default' : 'secondary'}>{member.role}</Badge>
+                  <Badge
+                    variant={
+                      membro.funcao === "Proprietária" ? "default" : "secondary"
+                    }
+                  >
+                    {membro.funcao}
+                  </Badge>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <span className={`h-2.5 w-2.5 rounded-full ${member.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <span>{member.status === 'active' ? 'Ativo' : 'Inativo'}</span>
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        membro.status === "active" ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    />
+                    <span>{membro.status === "active" ? "Ativo" : "Inativo"}</span>
                   </div>
                 </TableCell>
-                <TableCell>{member.lastActivity}</TableCell>
+                <TableCell>
+                  {new Date(membro.ultima_atividade).toLocaleString("pt-BR")}
+                </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
