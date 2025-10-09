@@ -149,6 +149,22 @@ model usuarios {
   servicos                                           servicos[]
 }
 
+enum StatusMembro {
+  ativo
+  inativo
+}
+
+model equipe {
+  id               Int          @id @default(autoincrement())
+  usuario_id       Int?
+  nome             String
+  email            String       @unique
+  funcao           String
+  status           StatusMembro @default(ativo)
+  ultima_atividade DateTime     @default(now())
+  criado_em        DateTime     @default(now())
+}
+
 
 enum mensagens_marketing_tipo {
   aniversario

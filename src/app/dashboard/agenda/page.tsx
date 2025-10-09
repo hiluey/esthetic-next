@@ -190,11 +190,18 @@ export default function AgendaPage() {
                   name="colaborador_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormControl>{renderSelect(field, colaboradores, "Selecione o colaborador")}</FormControl>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="text"
+                          placeholder="Digite o nome do colaborador"
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+
 
                 {/* Procedimento  */}
 

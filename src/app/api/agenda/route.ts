@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    // Pega o userId do cookie
+    const cookieHeader = req.headers.get("cookie") || "";
+    const match = cookieHeader.match(/userId=(\d+)/);
+    const userId = match ? Number(match[1]) : null;
+
+    if (!userId) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
+
+    // Busca apenas os agendamentos do usuário logado
     const agendamentos = await prisma.agendamentos.findMany({
+      where: { usuario_id: userId },
       include: {
         clientes: true,
         servicos: true,
         usuarios_agendamentos_usuario_idTousuarios: true,
         usuarios_agendamentos_colaborador_idTousuarios: true,
       },
+      orderBy: { data_hora: "asc" },
     });
+
     return NextResponse.json(agendamentos);
   } catch (error: any) {
     return NextResponse.json(
@@ -40,12 +53,13 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
 
+    // Convertendo IDs
     const uid = Number(usuario_id);
     const cid = Number(cliente_id);
     const sid = Number(servico_id);
     const colid = Number(colaborador_id);
 
-    // Verificações de existência
+    // Verificações
     const usuario = await prisma.usuarios.findUnique({ where: { id: uid } });
     if (!usuario)
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 400 });
@@ -69,8 +83,8 @@ export async function POST(req: NextRequest) {
         cliente_id: cid,
         servico_id: sid,
         colaborador_id: colid,
-        data_hora: new Date(data_hora), // DateTime
-        procedimento: procedimento && procedimento.length > 0 ? procedimento : null, // string ou null
+        data_hora: new Date(data_hora),
+        procedimento: procedimento?.length ? procedimento : null,
         valor: valor ? Number(valor) : null,
         status: "agendado",
         pago: false,
