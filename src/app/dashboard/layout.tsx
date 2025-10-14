@@ -39,6 +39,8 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { useUser } from "@/hooks/useUser";
+import Image from "next/image";
+
 
 const navLinks = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -128,10 +130,15 @@ export default function DashboardLayout({
       <Sidebar>
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2.5">
-            <Icons.logo className="h-8 w-8 text-primary" />
-            <h1 className="text-xl font-bold font-headline text-foreground">
-              EsteticaAI
-            </h1>
+            <Image
+              src="/logo.png"
+              alt="EsteticaAI Logo"
+              width={150}
+              height={150}
+              className="object-contain"
+              priority
+            />
+
           </Link>
         </SidebarHeader>
 
