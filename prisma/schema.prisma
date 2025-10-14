@@ -150,19 +150,20 @@ model usuarios {
 }
 
 enum StatusMembro {
-  ativo
-  inativo
+  active
+  inactive
 }
 
+
 model equipe {
-  id               Int          @id @default(autoincrement())
+  id               Int           @id @default(autoincrement())
   usuario_id       Int?
   nome             String
-  email            String       @unique
+  email            String        @unique
   funcao           String
-  status           StatusMembro @default(ativo)
-  ultima_atividade DateTime     @default(now())
-  criado_em        DateTime     @default(now())
+  status           StatusMembro  @default(active)
+  ultima_atividade DateTime?     @default(now())
+  criado_em        DateTime?     @default(now())
 }
 
 
