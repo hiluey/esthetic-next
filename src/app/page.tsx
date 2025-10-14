@@ -49,12 +49,20 @@ export default function LoginPage() {
           {/* LOGO */}
           <div className="flex items-center justify-center mb-8">
             <div className="flex items-center gap-2">
-              <div className="bg-[#7E3AF2] rounded-md p-2">
-                <Icons.logo className="h-8 w-8 text-white" />
+              <div className="">
+                <Image
+                  src="/logo.png"
+                  alt="Estetify Logo"
+                  width={200}   
+                  height={200}
+                  className="object-contain"
+                  priority
+                />
               </div>
-              <h1 className="text-3xl font-semibold text-gray-900">Estetify</h1>
+        
             </div>
           </div>
+
 
           {/* TÍTULO */}
           <h2 className="text-center text-2xl font-semibold text-gray-900">
