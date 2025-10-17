@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Icons } from "@/components/icons"
+import Image from "next/image"
 
 export default function SignupPage() {
   return (
@@ -18,8 +19,21 @@ export default function SignupPage() {
       <Card className="mx-auto max-w-sm">
         <CardHeader className="text-center">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
-              <Icons.logo className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-serif font-bold text-foreground">EsteticaAI</h1>
+            <div className="flex items-center justify-center mb-8">
+              <div className="flex items-center gap-2">
+                <div className="">
+                  <Image
+                    src="/logo.png"
+                    alt="Estetify Logo"
+                    width={200}
+                    height={200}
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+
+              </div>
+            </div>
           </Link>
           <CardTitle className="text-2xl">Crie sua conta</CardTitle>
           <CardDescription>
@@ -46,7 +60,7 @@ export default function SignupPage() {
               <Input id="password" type="password" required />
             </div>
             <Button type="submit" className="w-full" asChild>
-                <Link href="/onboarding">Criar Conta e Configurar</Link>
+              <Link href="/onboarding">Criar Conta e Configurar</Link>
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">

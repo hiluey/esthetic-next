@@ -122,6 +122,7 @@ export default function DashboardLayout({
 
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST" });
+    localStorage.removeItem("user");
     router.push("/");
   }
 

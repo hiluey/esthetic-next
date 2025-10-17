@@ -3,14 +3,16 @@
 @tailwind utilities;
 
 @layer base {
-  :root, :root[data-theme="default"] {
+
+  :root,
+  :root[data-theme="default"] {
     --background: 0 0% 100%;
     --foreground: 224 71.4% 4.1%;
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
-    --primary: 340 82% 52%; /* Hot Pink */
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
     --secondary: 345 20% 95%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,8 +28,18 @@
     --radius: 0.8rem;
   }
 
+  :root[data-theme="pink"] {
+    --primary: 340 82% 52%;
+    /* Pink moderno */
+    --accent: 340 50% 97%;
+    --accent-foreground: 340 82% 52%;
+    --secondary: 345 20% 95%;
+    --ring: 340 82% 52%;
+  }
+
   :root[data-theme="blue"] {
-    --primary: 217 91% 60%; /* Serene Blue */
+    --primary: 217 91% 60%;
+    /* Serene Blue */
     --accent: 217 50% 97%;
     --accent-foreground: 217 91% 60%;
     --secondary: 220 20% 95%;
@@ -35,7 +47,8 @@
   }
 
   :root[data-theme="green"] {
-    --primary: 142 76% 36%; /* Mint Green */
+    --primary: 142 76% 36%;
+    /* Mint Green */
     --accent: 142 50% 97%;
     --accent-foreground: 142 76% 36%;
     --secondary: 150 20% 95%;
@@ -43,7 +56,8 @@
   }
 
   :root[data-theme="orange"] {
-    --primary: 25 95% 53%; /* Vibrant Orange */
+    --primary: 25 95% 53%;
+    /* Vibrant Orange */
     --accent: 25 50% 97%;
     --accent-foreground: 25 95% 53%;
     --secondary: 30 20% 95%;
@@ -67,14 +81,15 @@
     --input: 225 20% 20%;
   }
 
-  .dark, .dark[data-theme="default"] {
+  .dark,
+  .dark[data-theme="default"] {
     --primary: 340 90% 65%;
     --primary-foreground: 0 0% 100%;
     --accent: 340 20% 15%;
     --accent-foreground: 340 90% 65%;
     --ring: 340 90% 65%;
   }
-  
+
   .dark[data-theme="blue"] {
     --primary: 217 91% 60%;
     --accent: 217 20% 15%;
@@ -101,6 +116,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
