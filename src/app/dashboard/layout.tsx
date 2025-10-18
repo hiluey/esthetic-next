@@ -12,6 +12,7 @@ import {
   ChevronDown,
   LogOut,
   Settings,
+  Wrench,
   User,
   Sparkles,
 } from "lucide-react";
@@ -50,6 +51,8 @@ const navLinks = [
   { title: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
   { title: "Produtos", href: "/dashboard/produtos", icon: Box },
   { title: "Equipe", href: "/dashboard/equipe", icon: Users2 },
+    { title: "Clientes", href: "/dashboard/cliente", icon: User },
+  { title: "Serviços", href: "/dashboard/servico", icon: Wrench },
 ];
 
 function UserNav() {
