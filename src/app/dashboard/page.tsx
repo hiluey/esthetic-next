@@ -29,14 +29,43 @@ import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const chartData = [
-  { month: "Jan", revenue: 1860 },
-  { month: "Fev", revenue: 3050 },
-  { month: "Mar", revenue: 2370 },
-  { month: "Abr", revenue: 730 },
-  { month: "Mai", revenue: 2090 },
-  { month: "Jun", revenue: 2140 },
-];
+type AgendaItem = {
+  id: number;
+  procedimento: string | null;
+  valor: number | null;
+  data_hora: string; // ISO datetime
+};
+
+type MetaFinanceira = {
+  id: number;
+  descricao: string;
+  valor_meta: number;
+  periodo: string;
+  atingida: boolean;
+};
+
+type Pagamento = {
+  id: number;
+  valor: number;
+  metodo_pagamento: string;
+  data_pagamento: string;
+};
+
+type Stats = {
+  faturamento: number;
+  atendimentos: number;
+  ticketMedio: number;
+  metaMensal: number;
+  progressoMeta: number;
+};
+
+type DashboardData = {
+  stats: Stats;
+  agendamentos: AgendaItem[];
+  metas: MetaFinanceira[];
+  pagamentos: Pagamento[];
+  // você pode adicionar mais campos caso tenha
+};
 
 const chartConfig = {
   revenue: {
@@ -45,18 +74,10 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-type AgendaItem = {
-  id: number;
-  procedimento: string | null;
-  valor: number | null;
-  data_hora: string; // YYYY-MM-DD HH:MM:SS
-};
-
 export default function Dashboard() {
-  const { data: stats } = useSWR("/api/dashboard", fetcher, { refreshInterval: 10000 });
-  const { data: dailyAgenda } = useSWR<AgendaItem[]>("/api/agenda", fetcher, { refreshInterval: 10000 });
+  const { data, error } = useSWR<DashboardData>("/api/dashboard", fetcher, { refreshInterval: 10000 });
 
-  if (!stats || !dailyAgenda) {
+  if (!data) {
     return (
       <div className="flex items-center justify-center h-screen text-muted-foreground">
         Carregando dashboard...
@@ -64,13 +85,26 @@ export default function Dashboard() {
     );
   }
 
-  const today = new Date();
-  const todayString = today.toISOString().split("T")[0];
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-600">
+        Erro ao carregar dados do dashboard.
+      </div>
+    );
+  }
 
-  // Filtra apenas os agendamentos de hoje
-  const agendaHoje = dailyAgenda?.filter((item) =>
-    item.data_hora.startsWith(todayString)
-  );
+  const { stats, agendamentos, metas, pagamentos } = data;
+
+  // Se quiser, você pode gerar dados dinâmicos para o gráfico aqui usando `stats` ou outra info
+  // Por exemplo, use a meta mensal e o faturamento para montar algo
+  const chartData = [
+    { month: "Jan", revenue: 1860 },
+    { month: "Fev", revenue: 3050 },
+    { month: "Mar", revenue: 2370 },
+    { month: "Abr", revenue: 730 },
+    { month: "Mai", revenue: 2090 },
+    { month: "Jun", revenue: 2140 },
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,7 +117,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(stats?.faturamento ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {stats.faturamento.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <p className="text-xs text-muted-foreground">+20.1% em relação ao mês passado</p>
           </CardContent>
@@ -95,7 +129,7 @@ export default function Dashboard() {
             <CalendarCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.atendimentos ?? 0}</div>
+            <div className="text-2xl font-bold">{stats.atendimentos}</div>
             <p className="text-xs text-muted-foreground">+18.1% em relação ao mês passado</p>
           </CardContent>
         </Card>
@@ -107,7 +141,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(stats?.ticketMedio ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {stats.ticketMedio.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <p className="text-xs text-muted-foreground">+5.2% em relação ao mês passado</p>
           </CardContent>
@@ -120,11 +154,11 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {(stats?.metaMensal ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              {stats.metaMensal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
             </div>
             <div className="flex items-center gap-2 text-xs">
-              <Progress value={Math.min(stats?.progressoMeta ?? 0, 100)} className="h-2 bg-primary-foreground/20" />
-              <span>{Math.round(stats?.progressoMeta ?? 0)}%</span>
+              <Progress value={Math.min(stats.progressoMeta, 100)} className="h-2 bg-primary-foreground/20" />
+              <span>{Math.round(stats.progressoMeta)}%</span>
             </div>
           </CardContent>
         </Card>
@@ -163,8 +197,8 @@ export default function Dashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {agendaHoje?.length > 0 ? (
-                  agendaHoje.map((item) => (
+                {agendamentos.length > 0 ? (
+                  agendamentos.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-mono">
                         {new Date(item.data_hora).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}

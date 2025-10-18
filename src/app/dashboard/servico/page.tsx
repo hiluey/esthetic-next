@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { PlusCircle, MoreHorizontal, DollarSign, Tag } from "lucide-react";
 import { useForm } from "react-hook-form";
-
-import { ClipboardList, Info, Clock, DollarSign, Tag } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +13,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -30,271 +44,241 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type FormValues = {
+type ProdutoFormValues = {
   nome: string;
-  descricao: string;
-  duracao: number; // em minutos
-  valor: number;
   categoria: string;
+  preco_venda: number;
 };
 
-const categorias = [
-  "Cabelo",
-  "Pele",
-  "Unhas",
-  "Massagem",
-  "Maquiagem",
-  "Outros",
-];
+type Produto = {
+  id: number;
+  nome: string;
+  categoria: string;
+  preco_venda: number;
+  estoque?: number;
+};
 
-export default function ServicoPage() {
-  const [isLoading, setIsLoading] = useState(false);
+const categorias = ["Cabelo", "Pele", "Unhas", "Massagem", "Maquiagem", "Outros"];
+
+export default function ProdutosPage() {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
   const [apiResult, setApiResult] = useState<string | null>(null);
 
-  const form = useForm<FormValues>({
+  const form = useForm<ProdutoFormValues>({
     defaultValues: {
       nome: "",
-      descricao: "",
-      duracao: 30,
-      valor: 0,
       categoria: "",
+      preco_venda: 0,
     },
   });
 
-  async function onSubmit(values: FormValues) {
-    setIsLoading(true);
-    setApiResult(null);
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
 
+  const fetchProdutos = async () => {
+    setLoading(true);
     try {
-      // Monta o payload para a API, convertendo valor para string (Decimal)
+      const res = await fetch("/api/produtos");
+      const data = await res.json();
+      setProdutos(data);
+    } catch (error) {
+      console.error("Erro ao buscar produtos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onSubmit = async (values: ProdutoFormValues) => {
+    setApiResult(null);
+    try {
       const payload = {
         nome: values.nome,
-        descricao: values.descricao,
-        preco: values.valor.toString(),
-        duracao_minutos: values.duracao,
         categoria: values.categoria,
+        preco_venda: values.preco_venda.toString(),
       };
-
-      const response = await fetch("/api/servicos", {
+      const res = await fetch("/api/produtos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Erro da API: ${errorText}`);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText);
       }
-
-      const resultData = await response.json();
-      setApiResult(`✅ Serviço criado com ID ${resultData.id}.`);
+      const novo = await res.json();
+      setProdutos([novo, ...produtos]);
       form.reset();
+      setApiResult(`✅ Produto ${novo.nome} criado com sucesso!`);
+      setOpen(false);
     } catch (error: any) {
-      console.error("Erro ao criar serviço:", error);
-      setApiResult(`❌ Falha ao criar serviço: ${error.message}`);
-    } finally {
-      setIsLoading(false);
+      console.error("Erro ao cadastrar produto:", error);
+      setApiResult(`❌ Falha ao criar produto: ${error.message}`);
     }
-  }
+  };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-6 w-6" />
-            Cadastro de Serviço
-          </CardTitle>
-          <CardDescription>
-            Preencha os dados para cadastrar um novo serviço.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-6 relative"
-            >
-              {/* Nome */}
-              <FormField
-                control={form.control}
-                name="nome"
-                rules={{ required: "Nome do serviço é obrigatório." }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          type="text"
-                          placeholder="Nome do serviço"
-                          autoComplete="off"
-                          className="pl-10"
-                        />
-                        <Info className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Produtos</CardTitle>
+            <CardDescription>Gerencie seus produtos e preços.</CardDescription>
+          </div>
 
-              {/* Descrição */}
-              <FormField
-                control={form.control}
-                name="descricao"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          type="text"
-                          placeholder="Descrição detalhada"
-                          autoComplete="off"
-                          className="pl-10"
-                        />
-                        <Info className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Duração */}
-              <FormField
-                control={form.control}
-                name="duracao"
-                rules={{
-                  min: { value: 1, message: "Duração mínima é 1 minuto." },
-                }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          type="number"
-                          min={1}
-                          step={1}
-                          placeholder="Duração (minutos)"
-                          className="pl-10"
-                        />
-                        <Clock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Valor */}
-              <FormField
-                control={form.control}
-                name="valor"
-                rules={{
-                  min: { value: 0, message: "Valor não pode ser negativo." },
-                }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          {...field}
-                          type="number"
-                          step={0.01}
-                          min={0}
-                          placeholder="Valor (R$)"
-                          className="pl-10"
-                        />
-                        <DollarSign className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Categoria */}
-              <FormField
-                control={form.control}
-                name="categoria"
-                rules={{ required: "Categoria é obrigatória." }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <div className="relative">
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          defaultValue=""
-                        >
-                          <SelectTrigger className="pl-10">
-                            <SelectValue placeholder="Selecione a categoria" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categorias.map((cat) => (
-                              <SelectItem key={cat} value={cat}>
-                                {cat}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Tag className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <Button
-                type="submit"
-                className="w-full flex justify-center items-center gap-2"
-                disabled={isLoading}
-              >
-                {isLoading && (
-                  <svg
-                    className="animate-spin h-5 w-5 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v8H4z"
-                    ></path>
-                  </svg>
-                )}
-                {!isLoading && "Cadastrar Serviço"}
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-1">
+                <PlusCircle className="h-4 w-4" />
+                Adicionar
               </Button>
-            </form>
-          </Form>
+            </DialogTrigger>
 
-          {/* Resultado */}
-          {apiResult && (
-            <div
-              className={`mt-6 p-4 rounded-md border ${
-                apiResult.startsWith("✅")
-                  ? "bg-green-50 text-green-700 border-green-200"
-                  : "bg-red-50 text-red-700 border-red-200"
-              }`}
-            >
-              {apiResult}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Produto</DialogTitle>
+              </DialogHeader>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
+                  {/* Nome */}
+                  <FormField
+                    control={form.control}
+                    name="nome"
+                    rules={{ required: "Nome é obrigatório." }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label>Nome</Label>
+                        <FormControl>
+                          <Input placeholder="Nome do produto" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Categoria */}
+                  <FormField
+                    control={form.control}
+                    name="categoria"
+                    rules={{ required: "Categoria é obrigatória." }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label>Categoria</Label>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a categoria" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categorias.map((cat) => (
+                                <SelectItem key={cat} value={cat}>
+                                  {cat}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Preço de Venda */}
+                  <FormField
+                    control={form.control}
+                    name="preco_venda"
+                    rules={{
+                      min: { value: 0, message: "Valor não pode ser negativo." },
+                      required: "Preço de venda é obrigatório."
+                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label>Preço de Venda (R$)</Label>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step={0.01}
+                            min={0}
+                            placeholder="0.00"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full">
+                    Cadastrar Produto
+                  </Button>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+
+      <CardContent>
+        {apiResult && (
+          <p
+            className={`text-sm mb-4 font-semibold ${
+              apiResult.startsWith("✅") ? "text-green-600" : "text-red-600"
+            }`}
+          >
+            {apiResult}
+          </p>
+        )}
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Categoria</TableHead>
+              <TableHead>Preço de Venda</TableHead>
+              <TableHead>
+                <span className="sr-only">Ações</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center">
+                  Carregando...
+                </TableCell>
+              </TableRow>
+            ) : produtos.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  Nenhum produto encontrado
+                </TableCell>
+              </TableRow>
+            ) : (
+              produtos.map((produto) => (
+                <TableRow key={produto.id}>
+                  <TableCell className="font-medium">{produto.nome}</TableCell>
+                  <TableCell>{produto.categoria}</TableCell>
+                  <TableCell>
+                    {produto.preco_venda.toLocaleString("pt‑BR", {
+                      style: "currency",
+                      currency: "BRL",
+                    })}
+                  </TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="outline">
+                      <MoreHorizontal className="h-4 w-4" />
+                      Ações
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 }

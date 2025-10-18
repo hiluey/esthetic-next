@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+type StatusAgendamento = "cancelado" | "realizado" | "agendado" | null;
+
+// Função utilitária para converter valores Decimal ou qualquer tipo em number
+function toNumber(value: any): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number") return value;
+  if (typeof value.toNumber === "function") return value.toNumber();
+  return Number(value) || 0;
+}
+
 export async function GET() {
   try {
+    // Buscar agendamentos com joins
     const agendamentos = await prisma.agendamentos.findMany({
       include: {
         clientes: true,
@@ -10,22 +21,54 @@ export async function GET() {
         usuarios_agendamentos_colaborador_idTousuarios: true,
         usuarios_agendamentos_usuario_idTousuarios: true,
       },
-      orderBy: { data_hora: 'asc' },
+      orderBy: { data_hora: "asc" },
     });
 
-    // Opcional: buscar metas e pagamentos para dashboard
+    // Calcular faturamento total somando os valores (tratando Decimal)
+    const faturamento = agendamentos.reduce(
+      (total, item) => total + toNumber(item.valor),
+      0
+    );
+
+    // Contar agendamentos com status agendado ou realizado
+    const atendimentos = agendamentos.filter(
+      (a) => a.status === "agendado" || a.status === "realizado"
+    ).length;
+
+    // Calcular ticket médio (faturamento / atendimentos)
+    const ticketMedio = atendimentos > 0 ? faturamento / atendimentos : 0;
+
+    // Buscar metas financeiras (exemplo para o usuário)
     const metas = await prisma.metas_financeiras.findMany({
-      include: { usuarios: true },
+      where: { atingida: false },
     });
+
+    // Meta mensal para dashboard (pegando a primeira meta não atingida)
+    const metaMensal = metas.length > 0 ? toNumber(metas[0].valor_meta) : 0;
+
+    // Progresso da meta (faturamento / meta * 100)
+    const progressoMeta =
+      metaMensal > 0 ? Math.min((faturamento / metaMensal) * 100, 100) : 0;
+
+    // Montar o objeto de stats
+    const stats = {
+      faturamento,
+      atendimentos,
+      ticketMedio,
+      metaMensal,
+      progressoMeta,
+    };
+
+    // Opcional: buscar metas e pagamentos para outras informações no dashboard
     const pagamentos = await prisma.pagamentos.findMany({
       include: { agendamentos: true },
     });
 
-    return NextResponse.json({ agendamentos, metas, pagamentos });
+    return NextResponse.json({ stats, agendamentos, metas, pagamentos });
   } catch (error: any) {
-    console.error("Erro ao buscar agendamentos:", error);
+    console.error("Erro ao buscar dados do dashboard:", error);
     return NextResponse.json(
-      { error: "Erro ao buscar agendamentos", detalhes: error.message },
+      { error: "Erro ao buscar dados do dashboard", detalhes: error.message },
       { status: 500 }
     );
   }
@@ -35,9 +78,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // ========================
-    // Se vier dados de financeiro
-    // ========================
+    // Se vier dados de financeiro (meta ou pagamentos)
     if (body.meta || body.pagamentos) {
       const usuarioId = body.usuarioId;
       const meta = body.meta;
@@ -57,7 +98,6 @@ export async function POST(req: Request) {
 
       const novosPagamentos = [];
       for (const p of pagamentosData) {
-        // se quiser vincular a algum agendamento específico, adicione agendamento_id
         const pagamento = await prisma.pagamentos.create({
           data: {
             valor: p.valor,
@@ -68,16 +108,41 @@ export async function POST(req: Request) {
         novosPagamentos.push(pagamento);
       }
 
-      return NextResponse.json({ success: true, meta: novaMeta, pagamentos: novosPagamentos });
+      return NextResponse.json({
+        success: true,
+        meta: novaMeta,
+        pagamentos: novosPagamentos,
+      });
     }
 
-    // ========================
     // Se vier dados de agendamento
-    // ========================
-    const { usuario_id, cliente_id, servico_id, colaborador_id, data_hora } = body;
+    const {
+      usuario_id,
+      cliente_id,
+      servico_id,
+      colaborador_id,
+      data_hora,
+      procedimento,
+      valor,
+      status = "agendado",
+      pago = false,
+    }: {
+      usuario_id: number;
+      cliente_id: number;
+      servico_id: number;
+      colaborador_id: number;
+      data_hora: string;
+      procedimento?: string | null;
+      valor?: number | null;
+      status?: StatusAgendamento;
+      pago?: boolean;
+    } = body;
 
     if (!usuario_id || !cliente_id || !servico_id || !colaborador_id || !data_hora) {
-      return NextResponse.json({ error: "Todos os campos são obrigatórios." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Todos os campos obrigatórios devem ser preenchidos." },
+        { status: 400 }
+      );
     }
 
     const agendamento = await prisma.agendamentos.create({
@@ -86,9 +151,11 @@ export async function POST(req: Request) {
         cliente_id,
         servico_id,
         colaborador_id,
+        procedimento,
+        valor,
         data_hora: new Date(data_hora),
-        status: "agendado",
-        pago: false,
+        status,
+        pago,
       },
       include: {
         clientes: true,
