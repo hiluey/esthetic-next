@@ -33,7 +33,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard/agenda");
+      router.push("/dashboard");
     } catch {
       setError("Erro de conexão. Tente novamente.");
     } finally {
