@@ -1,19 +1,21 @@
+// lib/otel-setup.ts
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { MySQLInstrumentation } from '@opentelemetry/instrumentation-mysql';
 
-// Pega todas as instrumentações padrão
-const instrumentations = getNodeAutoInstrumentations();
-
-// Filtra a instrumentação do MySQL para não carregar
-const filteredInstrumentations = Object.values(instrumentations).filter(
-  (inst) => !(inst instanceof MySQLInstrumentation)
+const instrumentations = Object.values(getNodeAutoInstrumentations()).filter(
+  (inst) => !(inst instanceof MySQLInstrumentation) // desativa MySQL
 );
 
-const sdk = new NodeSDK({
-  instrumentations: filteredInstrumentations,
-});
+// ⚡ Opcional: se não usa Winston, desativa também
+// .filter(inst => inst.constructor.name !== 'WinstonInstrumentation')
+
+const sdk = new NodeSDK({ instrumentations });
 
 export async function startTelemetry() {
-  await sdk.start();
+  try {
+    await sdk.start();
+  } catch (err) {
+    console.error("Erro iniciando telemetry:", err);
+  }
 }
