@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
 
 type StatusAgendamento = "cancelado" | "realizado" | "agendado" | null;
 
@@ -11,9 +12,13 @@ function toNumber(value: any): number {
   return Number(value) || 0;
 }
 
+// ⚡ Inicializa telemetry no topo
+startTelemetry().catch((err) =>
+  console.error("Erro iniciando telemetry:", err)
+);
+
 export async function GET() {
   try {
-    // Buscar agendamentos com joins
     const agendamentos = await prisma.agendamentos.findMany({
       include: {
         clientes: true,
@@ -24,33 +29,26 @@ export async function GET() {
       orderBy: { data_hora: "asc" },
     });
 
-    // Calcular faturamento total somando os valores (tratando Decimal)
     const faturamento = agendamentos.reduce(
       (total, item) => total + toNumber(item.valor),
       0
     );
 
-    // Contar agendamentos com status agendado ou realizado
     const atendimentos = agendamentos.filter(
       (a) => a.status === "agendado" || a.status === "realizado"
     ).length;
 
-    // Calcular ticket médio (faturamento / atendimentos)
     const ticketMedio = atendimentos > 0 ? faturamento / atendimentos : 0;
 
-    // Buscar metas financeiras (exemplo para o usuário)
     const metas = await prisma.metas_financeiras.findMany({
       where: { atingida: false },
     });
 
-    // Meta mensal para dashboard (pegando a primeira meta não atingida)
     const metaMensal = metas.length > 0 ? toNumber(metas[0].valor_meta) : 0;
 
-    // Progresso da meta (faturamento / meta * 100)
     const progressoMeta =
       metaMensal > 0 ? Math.min((faturamento / metaMensal) * 100, 100) : 0;
 
-    // Montar o objeto de stats
     const stats = {
       faturamento,
       atendimentos,
@@ -59,7 +57,6 @@ export async function GET() {
       progressoMeta,
     };
 
-    // Opcional: buscar metas e pagamentos para outras informações no dashboard
     const pagamentos = await prisma.pagamentos.findMany({
       include: { agendamentos: true },
     });
@@ -78,7 +75,6 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // Se vier dados de financeiro (meta ou pagamentos)
     if (body.meta || body.pagamentos) {
       const usuarioId = body.usuarioId;
       const meta = body.meta;
@@ -115,7 +111,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Se vier dados de agendamento
     const {
       usuario_id,
       cliente_id,

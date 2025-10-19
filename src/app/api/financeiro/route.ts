@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
+
+startTelemetry().catch((err) =>
+  console.error("Erro iniciando telemetry:", err)
+);
 
 export async function POST(req: NextRequest) {
   try {

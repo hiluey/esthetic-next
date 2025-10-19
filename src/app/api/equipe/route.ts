@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
+
+// ⚡ Inicializa telemetry antes de qualquer operação com Prisma
+startTelemetry().catch((err) => console.error("Erro iniciando telemetry:", err));
 
 // POST /api/equipe - Criar novo membro da equipe
 export async function POST(req: NextRequest) {
@@ -9,7 +13,6 @@ export async function POST(req: NextRequest) {
 
     const { nome, email, funcao, status } = body;
 
-    // Validação mínima
     if (!nome || !email || !funcao) {
       return NextResponse.json(
         { error: "Nome, e-mail e função são obrigatórios." },
@@ -17,7 +20,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Define status padrão ("active")
     const statusValido = ["active", "inactive"];
     const statusFinal = status || "active";
 
@@ -28,19 +30,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Criação no banco
     const novoMembro = await prisma.equipe.create({
-      data: {
-        nome,
-        email,
-        funcao,
-        status: statusFinal, // "active" ou "inactive"
-        usuario_id: null,
-      },
+      data: { nome, email, funcao, status: statusFinal, usuario_id: null },
     });
 
     console.log("✅ Membro criado:", novoMembro);
-
     return NextResponse.json(novoMembro, { status: 201 });
   } catch (error: any) {
     console.error("❌ Erro ao criar membro:", error);
@@ -55,13 +49,11 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const equipe = await prisma.equipe.findMany({
-      orderBy: {
-        criado_em: "desc", // opcional: ordenar por criação
-      },
+      orderBy: { criado_em: "desc" },
     });
 
     return NextResponse.json(equipe, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Erro ao buscar equipe:", error);
     return NextResponse.json(
       { error: "Erro ao buscar equipe." },

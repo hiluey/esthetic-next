@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
+
+// ⚡ Inicializa telemetry antes de qualquer operação de banco
+startTelemetry().catch((err) => console.error("Erro iniciando telemetry:", err));
 
 export async function GET(req: NextRequest) {
   try {
     const clientes = await prisma.clientes.findMany({
-      include: {
-        agendamentos: true, // traz os agendamentos junto
-      },
-      orderBy: {
-        criado_em: "desc",
-      },
+      include: { agendamentos: true },
+      orderBy: { criado_em: "desc" },
     });
     return NextResponse.json(clientes);
   } catch (error) {
@@ -28,11 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     const novoCliente = await prisma.clientes.create({
-      data: {
-        nome,
-        telefone,
-        email,
-      },
+      data: { nome, telefone, email },
     });
 
     return NextResponse.json(novoCliente, { status: 201 });

@@ -1,6 +1,11 @@
 // app/api/me/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
+
+startTelemetry().catch((err) =>
+  console.error("Erro iniciando telemetry:", err)
+);
 
 export async function GET(req: Request) {
   // Pega os cookies do header manualmente

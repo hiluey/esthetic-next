@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
 
-export async function GET(req: Request) {
+// ⚡ Inicializa telemetry antes de qualquer operação de banco
+startTelemetry().catch((err) =>
+  console.error("Erro iniciando telemetry:", err)
+);
+
+export async function GET(req: NextRequest) {
   try {
     // Pega o userId do cookie
     const cookieHeader = req.headers.get("cookie") || "";

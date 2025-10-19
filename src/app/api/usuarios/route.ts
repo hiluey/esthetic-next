@@ -1,9 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { startTelemetry } from "@/lib/otel-setup";
+
+startTelemetry().catch((err) =>
+  console.error("Erro iniciando telemetry:", err)
+);
 
 export async function GET() {
-  const cookieStore = await cookies(); // <-- CORREÇÃO: await aqui
+  const cookieStore = await cookies(); 
   const userId = cookieStore.get("userId")?.value;
 
   if (!userId) {
