@@ -1,327 +1,190 @@
-"use client";
+'use client';
+import { useState, useEffect, useMemo } from "react";
+import { StatsCard } from "@/components/financeiro/StatsCard";
+import { TransactionCard } from "@/components/financeiro/TransactionCard";
+import { AddTransactionDialog } from "@/components/financeiro/AddTransactionDialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Wallet, TrendingUp, TrendingDown, Target } from "lucide-react";
 
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-// Tipos
-type Meta = {
-  descricao: string;
-  valor_meta: number;
-  periodo: "mensal" | "semanal" | "anual";
-};
-
-type Pagamento = {
+interface Transaction {
+  id: number;
+  tipo: "receita" | "despesa" | "retirada";
   descricao: string;
   valor: number;
-  metodo: "pix" | "cartao" | "dinheiro" | "boleto" | "outro";
+  metodo: string;
   data: string;
-  id?: number;
-};
+  cliente?: string;
+}
 
-export default function FinanceiroPage() {
-  const usuarioId = 1; // Substituir depois pelo id do usuário logado
+const Index = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const metaMensal = 15000;
 
-  // Estados
-  const [meta, setMeta] = useState<Meta | null>(null);
-  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
+  // Busca transações do banco ao carregar a página
+  useEffect(() => {
+    fetch("/api/transactions")
+      .then(res => res.json())
+      .then((data: Transaction[]) => setTransactions(data))
+      .catch(console.error);
+  }, []);
 
-  // Inputs Meta
-  const [metaDescricao, setMetaDescricao] = useState("");
-  const [metaValor, setMetaValor] = useState<number | "">("");
-  const [metaPeriodo, setMetaPeriodo] = useState<Meta["periodo"]>("mensal");
-
-  // Inputs Pagamento
-  const [pagDescricao, setPagDescricao] = useState("");
-  const [pagValor, setPagValor] = useState<number | "">("");
-  const [pagMetodo, setPagMetodo] = useState<Pagamento["metodo"]>("pix");
-  const [pagData, setPagData] = useState("");
-
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Resumo financeiro
-  const totalPagamentos = useMemo(
-    () => pagamentos.reduce((sum, p) => sum + p.valor, 0),
-    [pagamentos]
+  const totalReceitas = useMemo(
+    () => transactions
+      .filter((t) => t.tipo === "receita")
+      .reduce((sum, t) => sum + t.valor, 0),
+    [transactions]
   );
 
-  const lucroEstimado = useMemo(
-    () => (meta ? meta.valor_meta - totalPagamentos : 0),
-    [meta, totalPagamentos]
+  const totalDespesas = useMemo(
+    () => transactions
+      .filter((t) => t.tipo === "despesa")
+      .reduce((sum, t) => sum + t.valor, 0),
+    [transactions]
   );
 
-  // =========================
-  // Salvar Meta no Banco
-  // =========================
-  const salvarMeta = async () => {
-    if (!metaDescricao || !metaValor) return;
+  const totalRetiradas = useMemo(
+    () => transactions
+      .filter((t) => t.tipo === "retirada")
+      .reduce((sum, t) => sum + t.valor, 0),
+    [transactions]
+  );
 
-    setIsLoading(true);
+  const saldoAtual = useMemo(
+    () => totalReceitas - totalDespesas - totalRetiradas,
+    [totalReceitas, totalDespesas, totalRetiradas]
+  );
+
+  const progressoMeta = useMemo(
+    () => Math.min((totalReceitas / metaMensal) * 100, 100).toFixed(0),
+    [totalReceitas, metaMensal]
+  );
+
+  const handleNewTransaction = async (transaction: Omit<Transaction, "id">) => {
     try {
-      const res = await fetch("/api/financeiro", {
+      const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usuario_id: usuarioId,
-          descricao: metaDescricao,
-          valor_meta: Number(metaValor),
-          periodo: metaPeriodo,
-        }),
+        body: JSON.stringify(transaction)
       });
-
-      const data = await res.json();
-      if (res.ok) {
-        setMeta({
-          descricao: metaDescricao,
-          valor_meta: Number(metaValor),
-          periodo: metaPeriodo,
-        });
-        setMetaDescricao("");
-        setMetaValor("");
-      } else {
-        alert("Erro ao salvar meta: " + data.error);
-      }
+      const newTransaction = await res.json();
+      setTransactions(prev => [newTransaction, ...prev]);
     } catch (err) {
       console.error(err);
-      alert("Erro ao salvar meta");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // =========================
-  // Adicionar Pagamento
-  // =========================
-  const adicionarPagamento = async () => {
-    if (!pagDescricao || !pagValor || !pagData) return;
-
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/financeiro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usuario_id: usuarioId,
-          descricao: pagDescricao,
-          valor: Number(pagValor),
-          metodo_pagamento: pagMetodo,
-          data_pagamento: pagData,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setPagamentos((prev) => [
-          ...prev,
-          { descricao: pagDescricao, valor: Number(pagValor), metodo: pagMetodo, data: pagData },
-        ]);
-        setPagDescricao("");
-        setPagValor("");
-        setPagData("");
-      } else {
-        alert("Erro ao salvar pagamento: " + data.error);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao salvar pagamento");
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Lado esquerdo: Cadastro */}
-      <div className="lg:col-span-1 space-y-6">
-        {/* Meta */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Definir Meta Financeira</CardTitle>
-            <CardDescription>Cadastre sua meta uma única vez.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {meta ? (
-              <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                <p className="font-semibold">{meta.descricao}</p>
-                <p>Valor: R${meta.valor_meta.toFixed(2)}</p>
-                <p>Período: {meta.periodo}</p>
-              </div>
-            ) : (
-              <>
-                <Input
-                  placeholder="Descrição da meta"
-                  value={metaDescricao}
-                  onChange={(e) => setMetaDescricao(e.target.value)}
-                />
-                <Input
-                  type="number"
-                  placeholder="Valor da meta"
-                  value={metaValor}
-                  onChange={(e) =>
-                    setMetaValor(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                />
-                <Select
-                  value={metaPeriodo}
-                  onValueChange={(v) => setMetaPeriodo(v as Meta["periodo"])}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Período" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensal">Mensal</SelectItem>
-                    <SelectItem value="semanal">Semanal</SelectItem>
-                    <SelectItem value="anual">Anual</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={salvarMeta}
-                  disabled={isLoading}
-                  className="w-full"
-                >
-                  {isLoading ? "Salvando..." : "Salvar Meta"}
-                </Button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+<div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-violet-50/20">
+  <div className="max-w-7xl mx-auto px-6 lg:px-10 py-12 space-y-12">
 
-        {/* Pagamento */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar Pagamento</CardTitle>
-            <CardDescription>
-              Adicione cada gasto ou pagamento realizado.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input
-              placeholder="Descrição do pagamento"
-              value={pagDescricao}
-              onChange={(e) => setPagDescricao(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Valor"
-              value={pagValor}
-              onChange={(e) =>
-                setPagValor(
-                  e.target.value === "" ? "" : Number(e.target.value)
-                )
-              }
-            />
-            <Select
-              value={pagMetodo}
-              onValueChange={(v) => setPagMetodo(v as Pagamento["metodo"])}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Método de pagamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pix">Pix</SelectItem>
-                <SelectItem value="cartao">Cartão</SelectItem>
-                <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                <SelectItem value="boleto">Boleto</SelectItem>
-                <SelectItem value="outro">Outro</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              type="date"
-              value={pagData}
-              onChange={(e) => setPagData(e.target.value)}
-            />
-            <Button
-              onClick={adicionarPagamento}
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading ? "Salvando..." : "Adicionar Pagamento"}
-            </Button>
-          </CardContent>
-        </Card>
+    {/* Header */}
+    <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+      <div>
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-violet-700 to-purple-500 text-transparent bg-clip-text">
+          Financeiro
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Acompanhe de forma simples e elegante o desempenho do seu negócio.
+        </p>
+      </div>
+      <AddTransactionDialog onAdd={handleNewTransaction} />
+    </header>
+
+    {/* Stats */}
+    <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <StatsCard
+        label="Saldo Atual"
+        value={`R$ ${saldoAtual.toFixed(2)}`}
+        icon={Wallet}
+        iconColor="text-violet-700"
+        iconBg="bg-violet-100/70"
+      />
+      <StatsCard
+        label="Receitas"
+        value={`R$ ${totalReceitas.toFixed(2)}`}
+        icon={TrendingUp}
+        iconColor="text-emerald-600"
+        iconBg="bg-emerald-100/60"
+      />
+      <StatsCard
+        label="Despesas"
+        value={`R$ ${totalDespesas.toFixed(2)}`}
+        icon={TrendingDown}
+        iconColor="text-rose-600"
+        iconBg="bg-rose-100/60"
+      />
+      <StatsCard
+        label="Meta Mensal"
+        value={`${progressoMeta}%`}
+        icon={Target}
+        iconColor="text-purple-700"
+        iconBg="bg-purple-100/60"
+      />
+    </section>
+
+    {/* Meta Progress */}
+    <section className="bg-card rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-500 p-8">
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">Progresso da Meta</p>
+          <p className="text-2xl font-semibold text-foreground">
+            R$ {totalReceitas.toFixed(2)} / R$ {metaMensal.toFixed(2)}
+          </p>
+        </div>
+        <p className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-500 text-transparent bg-clip-text">
+          {progressoMeta}%
+        </p>
+      </div>
+      <div className="w-full bg-secondary/40 rounded-full h-3 overflow-hidden">
+        <div
+          className="bg-gradient-to-r from-violet-500 to-purple-600 h-full rounded-full transition-all duration-700 ease-out"
+          style={{ width: `${progressoMeta}%` }}
+        />
+      </div>
+    </section>
+
+    {/* Transactions */}
+    <section className="bg-card rounded-2xl border border-border/40 shadow-sm hover:shadow-md transition-all duration-500 overflow-hidden">
+      <div className="p-6 border-b border-border/40 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">Transações</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {transactions.length} {transactions.length === 1 ? "registro" : "registros"}
+          </p>
+        </div>
       </div>
 
-      {/* Resumo */}
-      <div className="lg:col-span-2 space-y-4">
-        <Card className="sticky top-24">
-          <CardHeader>
-            <CardTitle>Resumo Financeiro</CardTitle>
-            <CardDescription>Atualizado em tempo real</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-4 text-center">
-            <div className="p-4 bg-green-50 rounded-lg border">
-              <p className="text-sm text-gray-500">Meta</p>
-              <p className="text-xl font-bold text-green-700">
-                {meta ? `R$${meta.valor_meta.toFixed(2)}` : "R$0,00"}
-              </p>
+      <ScrollArea className="h-[480px]">
+        {transactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-violet-100 to-purple-50 flex items-center justify-center mb-4 shadow-inner">
+              <Wallet className="w-7 h-7 text-violet-600" />
             </div>
-            <div className="p-4 bg-red-50 rounded-lg border">
-              <p className="text-sm text-gray-500">Total de Pagamentos</p>
-              <p className="text-xl font-bold text-red-700">
-                R${totalPagamentos.toFixed(2)}
-              </p>
-            </div>
-            <div className="p-4 bg-blue-50 rounded-lg border">
-              <p className="text-sm text-gray-500">Lucro Estimado</p>
-              <p className="text-xl font-bold text-blue-700">
-                R${lucroEstimado.toFixed(2)}
-              </p>
-            </div>
-          </CardContent>
+            <p className="text-lg font-medium">Nenhuma transação</p>
+            <p className="text-sm text-muted-foreground">
+              Clique em{" "}
+              <span className="text-violet-600 font-medium">“Nova Transação”</span> para começar.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/40 p-3">
+            {transactions.map((transaction) => (
+              <TransactionCard
+                key={transaction.id}
+                transaction={transaction}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+    </section>
 
-          {/* Lista de Pagamentos */}
-          <CardContent className="mt-4 overflow-x-auto max-h-64">
-            <h3 className="font-semibold mb-2">Pagamentos / Gastos</h3>
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b">
-                  <th className="py-2 px-3">Descrição</th>
-                  <th className="py-2 px-3">Valor</th>
-                  <th className="py-2 px-3">Método</th>
-                  <th className="py-2 px-3">Data</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagamentos.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="py-4 text-center text-gray-500 italic"
-                    >
-                      Nenhum pagamento registrado
-                    </td>
-                  </tr>
-                ) : (
-                  pagamentos.map((p, i) => (
-                    <tr key={i} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-3">{p.descricao}</td>
-                      <td className="py-2 px-3">R${p.valor.toFixed(2)}</td>
-                      <td className="py-2 px-3">{p.metodo}</td>
-                      <td className="py-2 px-3">{p.data}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+  </div>
+</div>
+
+
+
   );
-}
+};
+
+export default Index;
