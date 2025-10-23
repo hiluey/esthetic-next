@@ -7,31 +7,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model agendamentos {
-  id              Int       @id @default(autoincrement())
-  usuario_id      Int?
-  cliente_id      Int?
-  servico_id      Int?
-  colaborador_id  Int?
-  procedimento    String?
-  valor           Decimal?
-  hora_marcada    String?
-  data_hora       DateTime?
-  status          agendamentos_status? @default(agendado)
-  pago            Boolean?  @default(false)
-  criado_em       DateTime? @default(now())
-
-  usuarios_agendamentos_usuario_idTousuarios     usuarios? @relation("agendamentos_usuario_idTousuarios", fields: [usuario_id], references: [id])
-  clientes                                       clientes? @relation(fields: [cliente_id], references: [id])
-  servicos                                       servicos? @relation(fields: [servico_id], references: [id])
-  usuarios_agendamentos_colaborador_idTousuarios usuarios? @relation("agendamentos_colaborador_idTousuarios", fields: [colaborador_id], references: [id])
+  id                                             Int                  @id @default(autoincrement())
+  usuario_id                                     Int?
+  cliente_id                                     Int?
+  servico_id                                     Int?
+  colaborador_id                                 Int?
+  procedimento                                   String?
+  valor                                          Decimal?
+  hora_marcada                                   String?
+  data_hora                                      DateTime?
+  status                                         agendamentos_status? @default(agendado)
+  pago                                           Boolean?             @default(false)
+  criado_em                                      DateTime?            @default(now())
+  status_pagamento                               status_pagamento?    @default(nao_pagou)
+  clientes                                       clientes?            @relation(fields: [cliente_id], references: [id])
+  usuarios_agendamentos_colaborador_idTousuarios usuarios?            @relation("agendamentos_colaborador_idTousuarios", fields: [colaborador_id], references: [id])
+  servicos                                       servicos?            @relation(fields: [servico_id], references: [id])
+  usuarios_agendamentos_usuario_idTousuarios     usuarios?            @relation("agendamentos_usuario_idTousuarios", fields: [usuario_id], references: [id])
   pagamentos                                     pagamentos[]
 
-  @@index([cliente_id], map: "agendamentos_cliente_id_idx")
-  @@index([colaborador_id], map: "agendamentos_colaborador_id_idx")
-  @@index([servico_id], map: "agendamentos_servico_id_idx")
-  @@index([usuario_id], map: "agendamentos_usuario_id_idx")
+  @@index([cliente_id])
+  @@index([colaborador_id])
+  @@index([servico_id])
+  @@index([usuario_id])
 }
 
 model clientes {
@@ -45,7 +44,7 @@ model clientes {
   agendamentos    agendamentos[]
   usuarios        usuarios?      @relation(fields: [usuario_id], references: [id], map: "clientes_usuario_id_fk")
 
-  @@index([usuario_id], map: "clientes_usuario_id_idx")
+  @@index([usuario_id])
 }
 
 model mensagens_marketing {
@@ -58,7 +57,7 @@ model mensagens_marketing {
   criado_em  DateTime?                   @default(now())
   usuarios   usuarios?                   @relation(fields: [usuario_id], references: [id], map: "mensagens_marketing_usuario_id_fk")
 
-  @@index([usuario_id], map: "mensagens_marketing_usuario_id_idx")
+  @@index([usuario_id])
 }
 
 model metas_financeiras {
@@ -71,7 +70,7 @@ model metas_financeiras {
   criado_em  DateTime?                  @default(now())
   usuarios   usuarios?                  @relation(fields: [usuario_id], references: [id], map: "metas_financeiras_usuario_id_fk")
 
-  @@index([usuario_id], map: "metas_financeiras_usuario_id_idx")
+  @@index([usuario_id])
 }
 
 model pagamentos {
@@ -83,7 +82,7 @@ model pagamentos {
   status           pagamentos_status?           @default(pendente)
   agendamentos     agendamentos?                @relation(fields: [agendamento_id], references: [id], map: "pagamentos_agendamento_id_fk")
 
-  @@index([agendamento_id], map: "pagamentos_agendamento_id_idx")
+  @@index([agendamento_id])
 }
 
 model produtos {
@@ -97,7 +96,7 @@ model produtos {
   criado_em   DateTime? @default(now())
   usuarios    usuarios? @relation(fields: [usuario_id], references: [id], map: "produtos_usuario_id_fk")
 
-  @@index([usuario_id], map: "produtos_usuario_id_idx")
+  @@index([usuario_id])
 }
 
 model relatorios {
@@ -108,37 +107,36 @@ model relatorios {
   criado_em      DateTime? @default(now())
   usuarios       usuarios? @relation(fields: [usuario_id], references: [id], map: "relatorios_usuario_id_fk")
 
-  @@index([usuario_id], map: "relatorios_usuario_id_idx")
+  @@index([usuario_id])
 }
 
 model servicos {
-  id              Int       @id @default(autoincrement())
+  id              Int            @id @default(autoincrement())
   usuario_id      Int?
   nome            String?
   descricao       String?
   preco           Decimal?
   duracao_minutos Int?
-  criado_em       DateTime? @default(now())
+  criado_em       DateTime?      @default(now())
   agendamentos    agendamentos[]
-  usuarios        usuarios? @relation(fields: [usuario_id], references: [id], map: "servicos_usuario_id_fk")
+  usuarios        usuarios?      @relation(fields: [usuario_id], references: [id], map: "servicos_usuario_id_fk")
 
-  @@index([usuario_id], map: "servicos_usuario_id_idx")
+  @@index([usuario_id])
 }
 
 model usuarios {
-  id                                                 Int       @id @default(autoincrement())
+  id                                                 Int                   @id @default(autoincrement())
   nome                                               String?
   nome_negocio                                       String?
   faturamento_mensal                                 Decimal?
   principais_metas                                   String?
   cor_app                                            String?
-  email                                              String?   @unique
+  email                                              String?               @unique
   senha_hash                                         String?
-  tipo                                               usuarios_tipo? @default(esteticista)
-  criado_em                                          DateTime? @default(now())
-
-  agendamentos_agendamentos_usuario_idTousuarios     agendamentos[] @relation("agendamentos_usuario_idTousuarios")
-  agendamentos_agendamentos_colaborador_idTousuarios agendamentos[] @relation("agendamentos_colaborador_idTousuarios")
+  tipo                                               usuarios_tipo?        @default(esteticista)
+  criado_em                                          DateTime?             @default(now())
+  agendamentos_agendamentos_colaborador_idTousuarios agendamentos[]        @relation("agendamentos_colaborador_idTousuarios")
+  agendamentos_agendamentos_usuario_idTousuarios     agendamentos[]        @relation("agendamentos_usuario_idTousuarios")
   clientes                                           clientes[]
   mensagens_marketing                                mensagens_marketing[]
   metas_financeiras                                  metas_financeiras[]
@@ -147,20 +145,20 @@ model usuarios {
   servicos                                           servicos[]
 }
 
+model equipe {
+  id               Int          @id @default(autoincrement())
+  usuario_id       Int?
+  nome             String
+  email            String       @unique
+  funcao           String
+  status           StatusMembro @default(active)
+  ultima_atividade DateTime?    @default(now())
+  criado_em        DateTime?    @default(now())
+}
+
 enum StatusMembro {
   active
   inactive
-}
-
-model equipe {
-  id               Int           @id @default(autoincrement())
-  usuario_id       Int?
-  nome             String
-  email            String        @unique
-  funcao           String
-  status           StatusMembro  @default(active)
-  ultima_atividade DateTime?     @default(now())
-  criado_em        DateTime?     @default(now())
 }
 
 enum mensagens_marketing_tipo {
@@ -206,4 +204,10 @@ enum agendamentos_status {
   agendado
   realizado
   cancelado
+}
+
+enum status_pagamento {
+  pagou
+  nao_pagou
+  nao_compareceu
 }
