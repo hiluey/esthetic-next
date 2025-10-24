@@ -44,15 +44,16 @@ const localizer = dateFnsLocalizer({
 });
 
 type Evento = {
+  start: Date;
+  end: Date;
   id: number;
   title: string;
-  start: string;
-  end: string;
   colaborador: string;
   valor: number | null;
   status_pagamento: "pagou" | "nao_pagou" | "nao_compareceu";
   procedimento?: string;
 };
+
 
 type FormValues = {
   usuario_id: number;
