@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import {
   Card,
@@ -10,6 +10,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Edit3 } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 import {
   Table,
@@ -35,6 +36,17 @@ import {
   Edit,
   Trash2,
   Search,
+  LayoutDashboard,
+  Sparkles,
+  Calendar,
+  DollarSign as Dollar,
+  Megaphone,
+  Box,
+  Users2,
+  User,
+  Wrench,
+  Check,
+  X,
 } from "lucide-react";
 import {
   ChartContainer,
@@ -81,6 +93,18 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+// Opções de atalhos disponíveis
+const allShortcuts = [
+  { title: "Chat IA", href: "/dashboard/ia", icon: Sparkles },
+  { title: "Agenda", href: "/dashboard/agenda", icon: Calendar },
+  { title: "Financeiro", href: "/dashboard/financeiro", icon: Dollar },
+  { title: "Marketing", href: "/dashboard/marketing", icon: Megaphone },
+  { title: "Produtos", href: "/dashboard/produtos", icon: Box },
+  { title: "Equipe", href: "/dashboard/equipe", icon: Users2 },
+  { title: "Clientes", href: "/dashboard/cliente", icon: User },
+  { title: "Serviços", href: "/dashboard/servico", icon: Wrench },
+];
+
 export default function Dashboard() {
   const { data, error } = useSWR<DashboardData>("/api/dashboard", fetcher, {
     refreshInterval: 10000,
@@ -89,6 +113,42 @@ export default function Dashboard() {
   const { user } = useUser();
   const router = useRouter();
 
+  // ==== NOVO: Estado dos atalhos ====
+  const [selectedShortcuts, setSelectedShortcuts] = useState<string[]>([]);
+  const [isEditShortcuts, setIsEditShortcuts] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("user_shortcuts");
+    if (saved) {
+      setSelectedShortcuts(JSON.parse(saved));
+    } else {
+      // padrão inicial
+      setSelectedShortcuts(["Agenda", "Chat IA", "Financeiro", "Clientes"]);
+    }
+  }, []);
+
+  const toggleShortcut = (title: string) => {
+    setSelectedShortcuts((prev) => {
+      if (prev.includes(title)) {
+        return prev.filter((s) => s !== title);
+      } else if (prev.length < 4) {
+        return [...prev, title];
+      } else {
+        return prev; // limita a 4
+      }
+    });
+  };
+
+  const saveShortcuts = () => {
+    localStorage.setItem("user_shortcuts", JSON.stringify(selectedShortcuts));
+    setIsEditShortcuts(false);
+  };
+
+  const visibleShortcuts = allShortcuts.filter((s) =>
+    selectedShortcuts.includes(s.title)
+  );
+
+  // ==== Resto dos estados ====
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -157,43 +217,74 @@ export default function Dashboard() {
       {/* Boas-vindas */}
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold">Olá, {user.nome}!</h1>
-        <p className="text-muted-foreground">
-          Veja os detalhes do seu negócio.
-        </p>
+        <p className="text-muted-foreground">Veja os detalhes do seu negócio.</p>
       </div>
 
       {/* Botões de Atalho */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-medium">Atalhos Rápidos</h2>
         <Button
-          variant="outline"
-          className="flex items-center gap-2"
-          onClick={() => router.push("/dashboard/agenda")}
+          variant="ghost"
+          size="sm"
+          className="flex items-center gap-1"
+          onClick={() => setIsEditShortcuts(true)}
         >
-          <CalendarDays className="h-4 w-4" /> Agendar Horário
-        </Button>
-        <Button
-          variant="outline"
-          className="flex items-center gap-2"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <ClipboardList className="h-4 w-4" /> Nova Tarefa
-        </Button>
-        <Button
-          variant="outline"
-          className="flex items-center gap-2"
-          onClick={() => router.push("/dashboard/financeiro")}
-        >
-          <BarChart3 className="h-4 w-4" /> Ver Finanças
-        </Button>
-        <Button
-          variant="outline"
-          className="flex items-center gap-2"
-          onClick={() => router.push("/dashboard/negocio/novo")}
-        >
-          <Briefcase className="h-4 w-4" /> Novo Negócio
+          <Edit3 className="h-4 w-4" /> Editar
         </Button>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {visibleShortcuts.map((shortcut) => (
+          <Button
+            key={shortcut.title}
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => router.push(shortcut.href)}
+          >
+            <shortcut.icon className="h-4 w-4" /> {shortcut.title}
+          </Button>
+        ))}
+      </div>
+
+      {/* Modal Editar Atalhos */}
+      <Dialog open={isEditShortcuts} onOpenChange={setIsEditShortcuts}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Escolha até 4 atalhos</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2">
+            {allShortcuts.map((item) => {
+              const selected = selectedShortcuts.includes(item.title);
+              const disabled =
+                !selected && selectedShortcuts.length >= 4;
+
+              return (
+                <button
+                  key={item.title}
+                  onClick={() => !disabled && toggleShortcut(item.title)}
+                  className={`border rounded-md p-3 flex items-center gap-2 text-sm transition-all ${
+                    selected
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background hover:bg-muted"
+                  } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.title}
+                  {selected && <Check className="h-4 w-4 ml-auto" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsEditShortcuts(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={saveShortcuts}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Cards de informações rápidas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
